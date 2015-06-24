@@ -1,2 +1,8 @@
 # ipbx-cdr
-Web panel for statistics based for the CDR Asterisk.
+Statistics for Asterisk
+
+##Build
+```bash
+composer install
+bower install
+```
