@@ -2,14 +2,27 @@
 
 require 'db.php';
 
-$query = $sql->query("SELECT * FROM `bit_cdr`");
+$typesQ = $sql->query("SHOW COLUMNS FROM `bit_cdr`");
 
-$data = [];
+$types = [];
 
-while ($row = $query->fetch_assoc()) {
-    $data[] = $row;
+while ($row = $typesQ->fetch_assoc()) {
+    $types[$row['Field']] = explode('(', $row['Type'])[0];
 }
 
-echo json_encode($data);
+$query = $sql->query("SELECT * FROM `bit_cdr`");
+
+$calls = [];
+
+while ($row = $query->fetch_assoc()) {
+    foreach ($row as $field => $data) {
+        if ($types[$field] == 'int') { // FIXME Handle tinyint and others
+            $row[$field] = intval($data);
+        }
+    }
+    $calls[] = $row;
+}
+
+echo json_encode($calls);
 
 ?>
