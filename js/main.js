@@ -98,24 +98,19 @@ function fillStat(el, stats) {
         field = stats[fieldName];
     if (field) {
         if (field.length) {
-
             var stat = el.attr('data-stat'),
-                type = typeof field[0],
-                statType = (type == 'number' ? '#' : '') + el.attr('data-stat');
+                numbers = typeof field[0] == 'number'; // Are numbers
 
-            switch (statType) {
-                case '#max':
-                    el.text(ss.max(stats.duration));
-                    break;
-
-                case '#min':
-                    el.text(ss.min(stats.duration));
-                    break;
-
-                default:
-                    el.text("???");
+            var ssXfun = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
+            if (numbers && ssXfun.indexOf(stat) != -1) {
+                el.text(ss[stat](field));
+            } else {
+                var statType = (numbers ? '#' : '') + stat;
+                switch (statType) {
+                    default: el.text("???");
                     console.warn("Unknown stat type", statType);
                     break;
+                }
             }
         } else {
             el.text("No data");
