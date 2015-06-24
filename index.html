@@ -5,12 +5,43 @@
     <meta charset="utf-8">
     <title>IPBX CDR</title>
     <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/eventEmitter/EventEmitter.js"></script>
+    <script src="bower_components/async/lib/async.js"></script>
     <script src="js/main.js"></script>
 </head>
 
 <body>
     <h1>Statistics</h1>
-    <p>Database connection status: <span id="dbStatus">unknown</span></p>
+    <p class="db">Database connection status:
+        <span class="status">unknown</span>
+    </p>
+    <p class="placeholder">Selection:
+        <input type="date" /> to
+        <input type="date" />
+    </p>
+    <h2>Overview</h2>
+    <div class="overview">
+        <h3>Calls</h3>
+        <div class="calls">
+            <h4>All</h4>
+            <ul class="all">
+                <li>Total:
+                    <span class="total">N</span>
+                </li>
+                <li>Answered:
+                    <span class="answered">N</span>
+                </li>
+                <li>Missed:
+                    <span class="missed">N</span>
+                </li>
+            </ul>
+            <!-- Copy -->
+            <h4>Inside</h4>
+            <h4>Intern</h4>
+            <h4>From outside</h4>
+            <h4>To outside</h4>
+        </div>
+    </div>
 </body>
 
 </html>
