@@ -1,6 +1,7 @@
 // CDR OBJECT
 function CDR() {
-    this.data = [];
+    this.allData = []; // All data collected
+    this.data = []; // Data filtered in use
     // TODO Time selection
     this.timeA = null; // From the begining
     this.timeB = null; // Up to now
@@ -9,18 +10,64 @@ function CDR() {
 }
 
 CDR.prototype = {
-    update: function() {
+    // Data management
+    update: function(cb) {
         // OPTZ Increment
-        this.updateAll();
+        this.updateAll(cb);
     },
-    updateAll: function() {
+    updateAll: function(cb) {
         var that = this;
         $.get('ajax/cdr_all')
             .done(function(text) {
-                that.data = JSON.parse(text);
-                that.emit('freshData', that.data);
+                that.allData = JSON.parse(text);
+                that.filterData(cb);
+            })
+            .fail(function(data) {
+                if (cb) cb(data.status);
             });
-    }
+    },
+    filterData: function(cb) {
+        this.data = this.allData; // PLACEHOLDER
+        this.emit('freshData', this.data);
+        if (cb) cb(null, this.data);
+    },
+
+    // Statistics generation
+    callerExists: function(caller, cb) {
+        async.some(this.data,
+            function exists(call, cba) {
+                cba(call.src == caller || call.dst == caller);
+            },
+            cb
+        );
+    },
+
+    srcStats: function(src, cb) {
+        var that = this;
+        async.filter(this.data,
+            function filter(call, cba) {
+                cba(call.src == src);
+            },
+            function then(calls) {
+                async.reduce(
+                    calls,
+                    stats = {
+                        dst: [],
+                        context: [],
+                        duration: [],
+                        billsec: [],
+                    },
+                    function fillLists(stats, call, cba) {
+                        for (var item in stats) {
+                            stats[item].push(call[item]);
+                        }
+                        cba(null, stats);
+                    },
+                    cb
+                );
+            }
+        );
+    },
 };
 
 // Inherit from EventEmitter
@@ -51,19 +98,23 @@ function updateOverviewCalls(data) {
 
     $('.total', selector).text(data.length);
 
-    var answered = 0,
-        missed = 0;
-    async.each(this.data, function(call, cb) {
-        if (call.disposition == 'ANSWERED') {
-            answered++;
-        } else {
-            missed++;
-        }
-        cb(null);
-    }, function() {
-        $('.answered', selector).text(answered);
-        $('.missed', selector).text(missed);
-    });
+    async.reduce(
+        this.data, {
+            answered: 0,
+            missed: 0
+        },
+        function(stats, call, cb) {
+            if (call.disposition == 'ANSWERED') {
+                stats.answered++;
+            } else {
+                stats.missed++;
+            }
+            cb(null, stats);
+        },
+        function(err, stats) {
+            $('.answered', selector).text(stats.answered);
+            $('.missed', selector).text(stats.missed);
+        });
 }
 
 // MAIN
@@ -77,6 +128,38 @@ $(function() {
             cdr.on('freshData', updateOverviewCalls);
         }
     ]);
+
+    $('.caller').each(function() {
+        var caller = $(this);
+
+        function updateCaller(num) {
+            cdr.srcStats(num, function(err, stats) {
+                var div = $('.src', caller);
+                async.parallel([
+                    function(cba) {
+                        $('.maxDuration', div).text(Math.max.apply(Math, stats.duration));
+                        cba();
+                    }
+                ], function(err) {
+                    console.log(stats.durations);
+                });
+            });
+        }
+
+        $('.caller input[name=name]').bind('change keyup paste', function() {
+            var input = $(this),
+                num = input.val();
+            cdr.callerExists(num, function(exists) {
+                if (exists) {
+                    input.css('color', '');
+                    updateCaller(num);
+                } else {
+                    input.css('color', 'red');
+                }
+            });
+        });
+
+    });
 
     $('.placeholder').css('color', 'gray');
     $('.placeholder input').attr('disabled', 'true');
