@@ -7,6 +7,7 @@
     <script src="bower_components/jquery/dist/jquery.js"></script>
     <script src="bower_components/eventEmitter/EventEmitter.js"></script>
     <script src="bower_components/async/lib/async.js"></script>
+    <script src="bower_components/simple-statistics/src/simple_statistics.js"></script>
     <script src="js/main.js"></script>
 </head>
 
@@ -46,7 +47,8 @@
         <h2>Stats for <input type="text" name="name" /></h2>
         <h3>As a caller</h3>
         <div class="src">
-            <p>Maximum duration <span class="maxDuration"></span></p>
+            <p>Maximum duration: <span data-field="duration" data-stat="max"></span></p>
+            <p>Minimum duration: <span data-field="duration" data-stat="min"></span></p>
         </div>
     </div>
 </body>

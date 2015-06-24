@@ -92,6 +92,39 @@ function queryDB(cb) {
         });
 }
 
+function fillStat(el, stats) {
+    el = $(el);
+    var fieldName = el.attr('data-field'),
+        field = stats[fieldName];
+    if (field) {
+        if (field.length) {
+
+            var stat = el.attr('data-stat'),
+                type = typeof field[0],
+                statType = (type == 'number' ? '#' : '') + el.attr('data-stat');
+
+            switch (statType) {
+                case '#max':
+                    el.text(ss.max(stats.duration));
+                    break;
+
+                case '#min':
+                    el.text(ss.min(stats.duration));
+                    break;
+
+                default:
+                    el.text("???");
+                    console.warn("Unknown stat type", statType);
+                    break;
+            }
+        } else {
+            el.text("No data");
+        }
+    } else {
+        console.warn("Unknown field", fieldName);
+    }
+}
+
 function updateOverviewCalls(data) {
     // TODO Other categories
     var selector = $('.overview .calls .all');
@@ -135,13 +168,9 @@ $(function() {
         function updateCaller(num) {
             cdr.srcStats(num, function(err, stats) {
                 var div = $('.src', caller);
-                async.parallel([
-                    function(cba) {
-                        $('.maxDuration', div).text(Math.max.apply(Math, stats.duration));
-                        cba();
-                    }
-                ], function(err) {
-                    console.log(stats.durations);
+                $('[data-stat]').each(function() {
+                    // OPTZ Async?
+                    fillStat(this, stats);
                 });
             });
         }
