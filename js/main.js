@@ -5,15 +5,18 @@ function CDR() {
     // TODO Time selection
     this.timeA = null; // From the begining
     this.timeB = null; // Up to now
-
-    this.updateAll();
 }
 
 CDR.prototype = {
     // Data management
     update: function(cb) {
-        // OPTZ Increment
-        this.updateAll(cb);
+        if (this.allData.length) {
+            if (!this.timeB) { // If up to now
+                // OPTZ Fetch only new data
+            }
+        } else {
+            this.updateAll(cb);
+        }
     },
     updateAll: function(cb) {
         var that = this;
@@ -32,40 +35,12 @@ CDR.prototype = {
         if (cb) cb(null, this.data);
     },
 
-    // Statistics generation
     callerExists: function(caller, cb) {
         async.some(this.data,
             function exists(call, cba) {
                 cba(call.src == caller || call.dst == caller);
             },
             cb
-        );
-    },
-
-    srcStats: function(src, cb) {
-        var that = this;
-        async.filter(this.data,
-            function filter(call, cba) {
-                cba(call.src == src);
-            },
-            function then(calls) {
-                async.reduce(
-                    calls,
-                    stats = {
-                        dst: [],
-                        dcontext: [],
-                        duration: [],
-                        billsec: [],
-                    },
-                    function fillLists(stats, call, cba) {
-                        for (var item in stats) {
-                            stats[item].push(call[item]);
-                        }
-                        cba(null, stats);
-                    },
-                    cb
-                );
-            }
         );
     },
 };
@@ -81,6 +56,21 @@ Array.prototype.diff = function(a) {
         return a.indexOf(i) < 0;
     });
 }; // From http://stackoverflow.com/a/4026828
+
+Array.prototype.transposeObjects = function() {
+    var that = this;
+    if (this.length) {
+        rep = {};
+        return Object.keys(this[0]).reduce(function(memo, cur) {
+            memo[cur] = that.map(function(row) {
+                return row[cur];
+            });
+            return memo;
+        }, {});
+    } else {
+        return {};
+    }
+}; // From http://stackoverflow.com/a/17428705
 
 function queryDB(cb) {
     var status = $('.db .status');
@@ -98,119 +88,161 @@ function queryDB(cb) {
         });
 }
 
-function fillStat(el, stats) {
+function fillStat(el) {
     el = $(el);
-    var fieldName = el.attr('data-field'),
-        field = stats[fieldName];
-    if (field) {
-        if (field.length) {
-            var stat = el.attr('data-stat'),
-                numbers = typeof field[0] == 'number'; // Are numbers
-            var occurs = null;
-            if (!numbers) {
-                occurs = field.reduce(function(occ, cur) {
-                    if (isNaN(occ[cur])) {
-                        occ[cur] = 1;
-                    } else {
-                        occ[cur]++;
-                    }
-                    return occ;
-                }, {});
-            }
+    async.waterfall([
+        function filterCalls(cb) { // OPTZ Filter at filter elements, not stat elements
+            var fieldName = el.attr('data-field'),
+                calls = cdr.data;
 
-            var ssXfun = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
-            var c3Nfun = ['bar', 'pie', 'donut'];
-            if (numbers && ssXfun.indexOf(stat) != -1) {
-                el.text(ss[stat](field));
-            } else if (!numbers && c3Nfun.indexOf(stat) != -1) {
-                var chartSpecs = {
-                        data: {
-                            columns: Object.keys(occurs).reduce(function assoc(memo, key) {
-                                memo.push([key, occurs[key]]);
-                                return memo;
-                            }, []),
-                            type: stat,
-                        },
-                        legend: {
-                            position: 'right'
-                        }
+            function applyFilter(filterElement, cbf) {
+                filterName = filterElement.attr('data-filter-field');
+                if (!calls[0][filterName]) {
+                    cb("No such field for filter " + filterName);
+                    return;
+                }
+                filterPattern = filterElement.attr('data-filter-pattern');
+                if (!filterPattern) {
+                    cb("No pattern field for filter " + filterName);
+                    return;
+                }
+                async.filter(
+                    calls,
+                    function(call, cba) {
+                        cba(call[filterName] == filterPattern); // TODO Regex
                     },
-                    oldChart = el.data('chart');
+                    function(data) {
+                        calls = data;
+                        cbf();
+                    }
+                );
+            }
+            async.parallel([
+                function(cba) {
+                    if (el.attr('data-filter-field')) {
+                        applyFilter(el, cba);
+                    } else {
+                        cba();
+                    }
+                },
+                function(cba) {
+                    async.each(el.parents('[data-filter-field]'), function(data, cbe) {
+                        applyFilter($(data), cbe);
+                    }, function(err) {
+                        cba(err);
+                    });
+                }
 
-                if (oldChart) {
-                    var columnsToUnload = Object.keys(oldChart.x())
-                        .diff(chartSpecs.data.columns.reduce(function(memo, key) {
-                            memo.push(key[0]);
-                            return memo;
-                        }, []));
-                    async.series([
-                        function(cba) {
-                            oldChart.load({
-                                columns: chartSpecs.data.columns,
-                                // unload: columnsToUnload,
-                                done: cba,
-                            });
-                        },
-                        function(cba) {
-                            oldChart.unload({
-                                ids: columnsToUnload,
-                                done: cba,
-                            });
+            ], function(err) {
+                cb(err, calls.transposeObjects()[fieldName]);
+            });
+
+        },
+        function(x, cb) {
+            if (x && x.length) {
+                var stat = el.attr('data-stat'),
+                    numbers = typeof x[0] == 'number'; // Are numbers
+
+                var occurs = null;
+                if (!numbers) {
+                    occurs = x.reduce(function(occ, cur) {
+                        if (isNaN(occ[cur])) {
+                            occ[cur] = 1;
+                        } else {
+                            occ[cur]++;
                         }
-                    ]);
+                        return occ;
+                    }, {});
+                }
+
+                var ssXfun = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
+                var c3Nfun = ['bar', 'pie', 'donut'];
+                if (numbers && ssXfun.indexOf(stat) != -1) {
+                    el.text(ss[stat](x));
+                } else if (!numbers && c3Nfun.indexOf(stat) != -1) {
+                    var columns = Object.keys(occurs).reduce(function assoc(memo, key) {
+                            memo.push([key, occurs[key]]);
+                            return memo;
+                        }, []),
+                        oldChart = el.data('chart');
+
+                    if (oldChart) {
+                        var columnsToUnload = Object.keys(oldChart.x())
+                            .diff(columns.reduce(function(memo, key) {
+                                memo.push(key[0]);
+                                return memo;
+                            }, []));
+                        async.series([
+                            function(cba) {
+                                oldChart.load({
+                                    columns: columns,
+                                    // unload: columnsToUnload,
+                                    done: cba,
+                                });
+                            },
+                            function(cba) {
+                                oldChart.unload({
+                                    ids: columnsToUnload,
+                                    done: cba,
+                                });
+                            }
+                        ]);
+                    } else {
+                        var chartSpecs = {
+                            data: {
+                                columns: columns,
+                                type: stat,
+                            },
+                            legend: {
+                                position: 'right'
+                            },
+                        };
+                        if (['pie', 'donut'].indexOf(stat) != -1) {
+                            chartSpecs[stat] = {
+                                label: {
+                                    format: function(value) {
+                                        return value;
+                                    }
+                                }
+                            };
+                        }
+                        var chart = c3.generate(chartSpecs);
+                        el.empty().append(chart.element).data('chart', chart);
+                    }
                 } else {
-                    var chart = c3.generate(chartSpecs);
-                    el.empty().append(chart.element).data('chart', chart);
+                    var statType = (numbers ? '#' : '') + stat;
+                    switch (statType) {
+                        case 'count':
+                        case '#count':
+                            el.text(x.length);
+                            break;
+
+                        case 'last':
+                        case '#last':
+                            el.text(x[x.length - 1]);
+                            break;
+                        case 'first':
+                        case '#first':
+                            el.text(x[x.length - 1]);
+                            break;
+
+                        default:
+                            cb("Unknown stat type " + statType);
+                            return;
+                    }
                 }
             } else {
-                var statType = (numbers ? '#' : '') + stat;
-                switch (statType) {
-                    case 'last':
-                    case '#last':
-                        el.text(field[field.length - 1]);
-                        break;
-                    case 'first':
-                    case '#first':
-                        el.text(field[field.length - 1]);
-                        break;
-
-                    default:
-                        el.text("???");
-                        console.warn("Unknown stat type", statType);
-                        break;
-                }
+                el.removeData();
+                el.text("No data");
             }
-        } else {
-            el.text("No data");
+            cb();
         }
-    } else {
-        console.warn("Unknown field", fieldName);
-    }
-}
-
-function updateOverviewCalls(data) {
-    // TODO Other categories
-    var selector = $('.overview .calls .all');
-
-    $('.total', selector).text(data.length);
-
-    async.reduce(
-        this.data, {
-            answered: 0,
-            missed: 0
-        },
-        function(stats, call, cb) {
-            if (call.disposition == 'ANSWERED') {
-                stats.answered++;
-            } else {
-                stats.missed++;
-            }
-            cb(null, stats);
-        },
-        function(err, stats) {
-            $('.answered', selector).text(stats.answered);
-            $('.missed', selector).text(stats.missed);
-        });
+    ], function(err) {
+        if (err) {
+            el.empty().text('???');
+            console.warn(err);
+        }
+    });
 }
 
 // MAIN
@@ -221,39 +253,36 @@ $(function() {
         queryDB,
         function() {
             cdr = new CDR();
-            cdr.on('freshData', updateOverviewCalls);
+            cdr.on('freshData', function() {
+                updateStats();
+            });
+            cdr.update();
+            setInterval(function() {
+                cdr.update();
+            }, 10000);
         }
     ]);
 
-    $('.caller').each(function() {
-        var caller = $(this);
-
-        function updateCaller(num) {
-            cdr.srcStats(num, function(err, stats) {
-                var div = $('.src', caller);
-                $('[data-stat]').each(function() {
-                    // OPTZ Async?
-                    fillStat(this, stats);
-                });
-            });
+    function updateStats(range) {
+        if (!range) {
+            range = document.body;
         }
+        $('[data-stat]', range).each(function() {
+            // OPTZ Async?
+            fillStat(this);
+        });
+    }
 
-        $('.caller input[name=name]').bind('change keyup paste', function() {
-            var input = $(this),
-                num = input.val();
-            cdr.callerExists(num, function(exists) {
-                if (exists) {
-                    input.css('color', '');
-                    updateCaller(num);
-                } else {
-                    input.css('color', 'red');
-                }
-            });
+    $('.caller').each(function() {
+        var caller = this;
+        $('input[name=name]', caller).bind('change keyup paste', function() {
+            $('[data-filter-field=src]', caller).attr('data-filter-pattern', $(this).val());
+            updateStats(caller);
         });
 
     });
 
-    $('.placeholder').css('color', 'gray');
     $('.placeholder').css('display', 'none');
+    $('.placeholder').css('color', 'gray');
     $('.placeholder input').attr('disabled', 'true');
 });

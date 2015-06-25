@@ -11,7 +11,7 @@
     <script src="bower_components/d3/d3.js"></script>
     <script src="bower_components/c3/c3.js"></script>
     <script src="js/main.js"></script>
-    <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css"/>
+    <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body>
@@ -30,16 +30,15 @@
             <h4>All</h4>
             <ul class="all">
                 <li>Total:
-                    <span class="total">N</span>
+                    <span data-field="calldate" data-stat="count">N</span>
                 </li>
                 <li>Answered:
-                    <span class="answered">N</span>
+                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
                 </li>
                 <li>Missed:
-                    <span class="missed">N</span>
+                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="NO ANSWER">N</span>
                 </li>
             </ul>
-            <!-- Copy -->
             <h4 class="placeholder">Inside</h4>
             <h4 class="placeholder">Intern</h4>
             <h4 class="placeholder">From outside</h4>
@@ -50,8 +49,8 @@
         <h2>Stats for
             <input type="text" name="name" />
         </h2>
-        <h3>As a caller</h3>
-        <div class="src">
+        <div data-filter-field="src" data-filter-pattern="">
+            <h3>As a caller</h3>
             <h4>Duration</h4>
             <p>Last:
                 <span data-field="duration" data-stat="last"></span>
@@ -74,8 +73,9 @@
             </p>
             <h4>Destinations</h4>
             <div data-field="dst" data-stat="pie"></div>
-            <h4>Context</h4>
-            <div data-field="dcontext" data-stat="donut"></div>
+
+            <h4>Last application</h4>
+            <div data-field="lastapp" data-stat="donut"></div>
         </div>
     </div>
 </body>
