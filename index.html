@@ -8,7 +8,10 @@
     <script src="bower_components/eventEmitter/EventEmitter.js"></script>
     <script src="bower_components/async/lib/async.js"></script>
     <script src="bower_components/simple-statistics/src/simple_statistics.js"></script>
+    <script src="bower_components/d3/d3.js"></script>
+    <script src="bower_components/c3/c3.js"></script>
     <script src="js/main.js"></script>
+    <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -44,22 +47,35 @@
         </div>
     </div>
     <div class="caller">
-        <h2>Stats for <input type="text" name="name" /></h2>
+        <h2>Stats for
+            <input type="text" name="name" />
+        </h2>
         <h3>As a caller</h3>
         <div class="src">
-            <p>Mean: <span data-field="duration" data-stat="mean"></span></p>
-            <p>Sum: <span data-field="duration" data-stat="sum"></span></p>
-            <p>Mode: <span data-field="duration" data-stat="mode"></span></p>
-            <p>Variance: <span data-field="duration" data-stat="variance"></span></p>
-            <p>Standard deviation: <span data-field="duration" data-stat="standard_deviation"></span></p>
-            <p>standard deviation: <span data-field="duration" data-stat="standard_deviation"></span></p>
-            <p>Median: <span data-field="duration" data-stat="median"></span></p>
-            <p>Geometric mean: <span data-field="duration" data-stat="geometric_mean"></span></p>
-            <p>Harmonic mean: <span data-field="duration" data-stat="harmonic_mean"></span></p>
-            <p>Root mean square: <span data-field="duration" data-stat="root_mean_square"></span></p>
-            <p>Minimum: <span data-field="duration" data-stat="min"></span></p>
-            <p>Maximum: <span data-field="duration" data-stat="max"></span></p>
-            <p>Sample variance: <span data-field="duration" data-stat="sample_variance"></span></p>
+            <h4>Duration</h4>
+            <p>Last:
+                <span data-field="duration" data-stat="last"></span>
+            </p>
+            <p>Mean:
+                <span data-field="duration" data-stat="mean"></span>
+            </p>
+            <p>Sum:
+                <span data-field="duration" data-stat="sum"></span>
+            </p>
+            <h4>Billing</h4>
+            <p>Last:
+                <span data-field="billsec" data-stat="last"></span>
+            </p>
+            <p>Mean:
+                <span data-field="billsec" data-stat="mean"></span>
+            </p>
+            <p>Sum:
+                <span data-field="billsec" data-stat="sum"></span>
+            </p>
+            <h4>Destinations</h4>
+            <div data-field="dst" data-stat="pie"></div>
+            <h4>Context</h4>
+            <div data-field="dcontext" data-stat="donut"></div>
         </div>
     </div>
 </body>

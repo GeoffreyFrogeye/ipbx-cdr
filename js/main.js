@@ -53,7 +53,7 @@ CDR.prototype = {
                     calls,
                     stats = {
                         dst: [],
-                        context: [],
+                        dcontext: [],
                         duration: [],
                         billsec: [],
                     },
@@ -76,6 +76,12 @@ for (var key in EventEmitter.prototype) {
 }
 
 // UTILITY FUNCTIONS
+Array.prototype.diff = function(a) {
+    return this.filter(function(i) {
+        return a.indexOf(i) < 0;
+    });
+}; // From http://stackoverflow.com/a/4026828
+
 function queryDB(cb) {
     var status = $('.db .status');
     status.text('querying...');
@@ -100,16 +106,78 @@ function fillStat(el, stats) {
         if (field.length) {
             var stat = el.attr('data-stat'),
                 numbers = typeof field[0] == 'number'; // Are numbers
+            var occurs = null;
+            if (!numbers) {
+                occurs = field.reduce(function(occ, cur) {
+                    if (isNaN(occ[cur])) {
+                        occ[cur] = 1;
+                    } else {
+                        occ[cur]++;
+                    }
+                    return occ;
+                }, {});
+            }
 
             var ssXfun = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
+            var c3Nfun = ['bar', 'pie', 'donut'];
             if (numbers && ssXfun.indexOf(stat) != -1) {
                 el.text(ss[stat](field));
+            } else if (!numbers && c3Nfun.indexOf(stat) != -1) {
+                var chartSpecs = {
+                        data: {
+                            columns: Object.keys(occurs).reduce(function assoc(memo, key) {
+                                memo.push([key, occurs[key]]);
+                                return memo;
+                            }, []),
+                            type: stat,
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    },
+                    oldChart = el.data('chart');
+
+                if (oldChart) {
+                    var columnsToUnload = Object.keys(oldChart.x())
+                        .diff(chartSpecs.data.columns.reduce(function(memo, key) {
+                            memo.push(key[0]);
+                            return memo;
+                        }, []));
+                    async.series([
+                        function(cba) {
+                            oldChart.load({
+                                columns: chartSpecs.data.columns,
+                                // unload: columnsToUnload,
+                                done: cba,
+                            });
+                        },
+                        function(cba) {
+                            oldChart.unload({
+                                ids: columnsToUnload,
+                                done: cba,
+                            });
+                        }
+                    ]);
+                } else {
+                    var chart = c3.generate(chartSpecs);
+                    el.empty().append(chart.element).data('chart', chart);
+                }
             } else {
                 var statType = (numbers ? '#' : '') + stat;
                 switch (statType) {
-                    default: el.text("???");
-                    console.warn("Unknown stat type", statType);
-                    break;
+                    case 'last':
+                    case '#last':
+                        el.text(field[field.length - 1]);
+                        break;
+                    case 'first':
+                    case '#first':
+                        el.text(field[field.length - 1]);
+                        break;
+
+                    default:
+                        el.text("???");
+                        console.warn("Unknown stat type", statType);
+                        break;
                 }
             }
         } else {
@@ -186,5 +254,6 @@ $(function() {
     });
 
     $('.placeholder').css('color', 'gray');
+    $('.placeholder').css('display', 'none');
     $('.placeholder input').attr('disabled', 'true');
 });
