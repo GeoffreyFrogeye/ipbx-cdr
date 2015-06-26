@@ -92,58 +92,82 @@ function fillStat(el) {
     el = $(el);
     async.waterfall([
         function filterCalls(cb) { // OPTZ Filter at filter elements, not stat elements
-            var fieldName = el.attr('data-field'),
-                calls = cdr.data;
+            var calls = cdr.data;
 
-            function applyFilter(filterElement, cbf) {
-                filterName = filterElement.attr('data-filter-field');
-                if (!calls[0][filterName]) {
-                    cb("No such field for filter " + filterName);
-                    return;
-                }
-                filterPattern = filterElement.attr('data-filter-pattern');
-                if (!filterPattern) {
-                    cb("No pattern field for filter " + filterName);
-                    return;
-                }
-                var flags = filterElement.attr('data-filter-flags');
-                async.filter(
-                    calls,
-                    function(call, cba) {
-                        if (flags !== undefined) {
-                            cba(call[filterName].match(new RegExp(filterPattern, flags)));
-                        } else {
-                            cba(call[filterName] == filterPattern);
+            function filter(filterElement, cbf) {
+                function applyFilter(func) {
+                    async.filter(
+                        calls,
+                        func,
+                        function(data) {
+                            calls = data;
+                            cbf();
                         }
-                    },
-                    function(data) {
-                        calls = data;
-                        cbf();
+                    );
+                }
+
+                var filterName = filterElement.attr('data-filter-field'),
+                    filterPattern = filterElement.attr('data-filter-pattern');
+
+                if (filterName) {
+                    if (!calls[0][filterName]) cb("No such field for filter " + filterName);
+                    if (!filterPattern) cb("No pattern field for filter " + filterName);
+
+                    var flags = filterElement.attr('data-filter-flags');
+                    if (flags !== undefined) {
+                        var regexp = new RegExp(filterPattern, flags);
+                        applyFilter(function fieldRegExpFilter(call, cba) {
+                            cba(call[filterName].match(regexp));
+                        });
+                    } else {
+                        applyFilter(function fieldWholeFilter(call, cba) {
+                            cba(call[filterName] == filterPattern);
+                        });
                     }
-                );
+                } else {
+                    var filterType = filterElement.attr('data-filter');
+                    switch (filterType) {
+                        case 'first':
+                            cb(null, [calls[0]]);
+                            break;
+
+                        case 'last':
+                            cb(null, [calls[calls.length-1]]);
+                            break;
+
+                        // TODO ≥/≤ date
+
+                        default:
+                            cb("Unknown filter type " + filterType);
+                    }
+                }
             }
+
             async.parallel([
                 function(cba) {
-                    if (el.attr('data-filter-field')) {
-                        applyFilter(el, cba);
+                    if (el.attr('data-filter') || el.attr('data-filter-field')) {
+                        filter(el, cba);
                     } else {
                         cba();
                     }
                 },
                 function(cba) {
-                    async.each(el.parents('[data-filter-field]'), function(data, cbe) {
-                        applyFilter($(data), cbe);
+                    async.each(el.parents('[data-filter],[data-filter-field]'), function(data, cbe) {
+                        filter($(data), cbe);
                     }, function(err) {
                         cba(err);
                     });
                 }
 
             ], function(err) {
-                cb(err, calls.transposeObjects()[fieldName]);
+                cb(err, calls);
             });
 
         },
-        function(x, cb) {
+        function transposeData(filteredCalls, cb) {
+            cb(null, filteredCalls.transposeObjects()[el.attr('data-field')]);
+        },
+        function generateStat(x, cb) {
             if (x && x.length) {
                 var stat = el.attr('data-stat'),
                     numbers = typeof x[0] == 'number'; // Are numbers
@@ -222,12 +246,15 @@ function fillStat(el) {
                             el.text(x.length);
                             break;
 
-                        case 'last':
-                        case '#last':
-                            el.text(x[x.length - 1]);
-                            break;
+                        case 'undefined':
+                        case '#undefined':
                         case 'first':
                         case '#first':
+                            el.text(x[0]);
+                            break;
+
+                        case 'last':
+                        case '#last':
                             el.text(x[x.length - 1]);
                             break;
 
@@ -272,7 +299,7 @@ $(function() {
         if (!range) {
             range = document.body;
         }
-        $('[data-stat]', range).each(function() {
+        $('[data-field]', range).each(function() {
             // OPTZ Async?
             fillStat(this);
         });
