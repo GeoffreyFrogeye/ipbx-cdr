@@ -36,7 +36,7 @@
                     <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
                 </li>
                 <li>Missed:
-                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="NO ANSWER">N</span>
+                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
                 </li>
             </ul>
             <h4 class="placeholder">Inside</h4>
@@ -49,7 +49,7 @@
         <h2>Stats for
             <input type="text" name="name" />
         </h2>
-        <div data-filter-field="src" data-filter-pattern="">
+        <div data-filter-field="src" data-filter-pattern=".*" data-filter-flags>
             <h3>As a caller</h3>
             <h4>Duration</h4>
             <p>Last:

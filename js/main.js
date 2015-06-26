@@ -106,10 +106,15 @@ function fillStat(el) {
                     cb("No pattern field for filter " + filterName);
                     return;
                 }
+                var flags = filterElement.attr('data-filter-flags');
                 async.filter(
                     calls,
                     function(call, cba) {
-                        cba(call[filterName] == filterPattern); // TODO Regex
+                        if (flags !== undefined) {
+                            cba(call[filterName].match(new RegExp(filterPattern, flags)));
+                        } else {
+                            cba(call[filterName] == filterPattern);
+                        }
                     },
                     function(data) {
                         calls = data;
@@ -276,7 +281,14 @@ $(function() {
     $('.caller').each(function() {
         var caller = this;
         $('input[name=name]', caller).bind('change keyup paste', function() {
-            $('[data-filter-field=src]', caller).attr('data-filter-pattern', $(this).val());
+            var num = $(this).val(),
+                filter = $('[data-filter-field=src]', caller);
+            filter.attr('data-filter-pattern', num ? num : ".*");
+            if (num) {
+                filter.removeAttr('data-filter-flags');
+            } else {
+                filter.attr('data-filter-flags', '');
+            }
             updateStats(caller);
         });
 
