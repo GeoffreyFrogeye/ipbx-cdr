@@ -3,17 +3,13 @@ function CDR() {
     this.allData = []; // All data collected
     this.data = []; // Data filtered in use
     // TODO Time selection
-    this.timeA = null; // From the begining
-    this.timeB = null; // Up to now
 }
 
 CDR.prototype = {
     // Data management
     update: function(cb) {
         if (this.allData.length) {
-            if (!this.timeB) { // If up to now
-                // OPTZ Fetch only new data
-            }
+            // OPTZ Fetch only new data
         } else {
             this.updateAll(cb);
         }
@@ -85,7 +81,8 @@ Array.prototype.diff = function(a) {
             allMatch = null,
             foundMatch = false;
 
-        while (m = matcher.exec(expr)) {
+        m = matcher.exec(expr);
+        while (m) {
 
             check = m[4];
             val = resolve(el, m[1] || m[5]);
@@ -118,6 +115,7 @@ Array.prototype.diff = function(a) {
 
             allMatch = allMatch === null ? foundMatch : allMatch && foundMatch;
 
+            m = matcher.exec(expr);
         }
 
         return allMatch;
@@ -169,24 +167,87 @@ function updateFilter(fil, cb) { // Update a single filter
     var filterDef = fil.data('filters');
     if (!filterDef) filterDef = [];
 
+    function onceFiltered(calls) {
+        fil.data('calls', calls);
+        if (cb) cb(null, calls);
+    }
+
+    if (!calls.length) {
+        onceFiltered([]);
+        return;
+    }
+
     // Defining filter functions
     async.map(filterDef, function findFilterFunction(fl, cbe) {
         var val = (function findFilterFunctionSync() {
             switch (fl.type) {
-                case 'simple':
+                case 'is':
+                case 'not':
                 case 'regexp':
+                    // Comparison, need pattern
                     if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
-                    if (!fl.pattern) return "No pattern field for filter " + fl.field;
-                    if (fl.type == 'simple') {
-                        return function simpleFilter(call, cbf) {
-                            cbf(call[fl.field] == fl.pattern);
-                        };
-                    } else { // fl.type == 'regexp'
-                        var regexp = new RegExp(fl.pattern, fl.flags);
-                        return function regexpFilter(call, cbf) {
-                            cbf(call[fl.field].match(regexp));
-                        };
+                    if (!fl.pattern) return "No pattern for filter " + fl.field;
+
+                    switch (fl.type) {
+                        case 'is':
+                            return function isFilter(call, cbf) {
+                                cbf(call[fl.field] == fl.pattern);
+                            };
+                        case 'not':
+                            return function notFilter(call, cbf) {
+                                cbf(call[fl.field] != fl.pattern);
+                            };
+                        case 'regexp':
+                            var regexp = new RegExp(fl.pattern, fl.flags);
+                            return function regexpFilter(call, cbf) {
+                                cbf(call[fl.field].match(regexp));
+                            };
+
+                        default:
+                            return "Filter type " + fl.type + "declared as string comparer but no handler defined";
                     }
+                    break;
+
+                case '==':
+                case '!=':
+                case '>':
+                case '<':
+                case '>=':
+                case '<=':
+                    // Number comparison, need number pattern
+                    if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
+                    var pat = parseFloat(fl.pattern);
+                    if (isNaN(pat)) return "Not a number pattern for filter " + fl.field;
+
+                    switch (fl.type) {
+                        case '==':
+                            return function eqFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) == pat);
+                            };
+                        case '!=':
+                            return function neqFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) != pat);
+                            };
+                        case '>':
+                            return function gtFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) > pat);
+                            };
+                        case '<':
+                            return function ltFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) < pat);
+                            };
+                        case '>=':
+                            return function getFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) >= pat);
+                            };
+                        case '<=':
+                            return function letFilter(call, cbf) {
+                                cbf(parseFloat(call[fl.field]) <= pat);
+                            };
+                        default:
+                            return "Filter type " + fl.type + "declared as number comparer but no handler defined";
+                    }
+
                     break;
 
                 case 'first':
@@ -200,8 +261,6 @@ function updateFilter(fil, cb) { // Update a single filter
                     return function lastFilter(call, cbf) {
                         cbf(call == calls[calls.length - 1]);
                     };
-
-                    // TODO Date ≥/≤ filter
 
                 default:
                     cb("Unknown filter type " + fl.type);
@@ -225,10 +284,7 @@ function updateFilter(fil, cb) { // Update a single filter
                         cbev(res);
                     });
                 }, cbF);
-            }, function onceFiltered(calls) {
-                fil.data('calls', calls);
-                if (cb) cb(null, calls);
-            });
+            }, onceFiltered);
         }
     });
 }
@@ -372,6 +428,89 @@ $(function() {
         }
     ]);
 
+    $('.dateFilter').each(function() {
+        var filter = $(this);
+        var A = [$('input[type=date].A'), $('input[type=time].A')];
+        var B = [$('input[type=date].B'), $('input[type=time].B')];
+        var bNowI = $('input[type=checkbox][name=bNow]');
+        var bNow = true;
+
+        function inputs(fun, cbf) {
+            async.each([A, B], function(X, cbe) {
+                async.each(X, fun, cbe);
+            }, cbf);
+        }
+
+        function getDate(els) {
+            return new Date(els[0].val() + ' ' + els[1].val());
+        }
+
+        function dateChange() {
+            var a = getDate(A);
+            var b = bNow ? new Date() : getDate(B);
+            filters = [];
+            if (a <= b) {
+                filters.push({
+                    type: '>=',
+                    field: 'calldate',
+                    pattern: a.getTime(),
+                });
+                if (!bNow) {
+                    filters.push({
+                        type: '<=',
+                        field: 'calldate',
+                        pattern: b.getTime(),
+                    });
+                }
+                inputs(function(el) {
+                    el.css('color', '');
+                });
+            } else {
+                inputs(function(el) {
+                    el.css('color', 'red');
+                });
+            }
+            filter.data('filters', filters);
+            changed(filter);
+        }
+
+        function setDate(els, date) {
+            els[0].val(date.getFullYear() + '-' + ("0" + (date.getMonth() + 1)).slice(-2) + '-' + ("0" + date.getDate()).slice(-2));
+            els[1].val(("0" + (date.getHours() + 1)).slice(-2) + ':' + ("0" + (date.getMinutes() + 1)).slice(-2));
+        }
+
+        setDate(B, new Date());
+        setInterval(function upBnow() {
+            if (bNow) {
+                setDate(B, new Date());
+            }
+        }, 60000);
+
+        bNowI.bind('change', function() {
+            bNow = $(this).is(':checked');
+            if (bNow) {
+                setDate(B, new Date());
+            }
+            dateChange();
+        });
+
+        async.each(B, function listenStopBnow(el, cba) {
+            el.bind('change', function stopBnow() {
+                bNow = false;
+                bNowI.attr('checked', false);
+            });
+        });
+
+        inputs(function(el) {
+            el.bind('change', dateChange);
+        });
+
+        cdr.once('freshData', function(calls) {
+            setDate(A, new Date(calls[0].calldate));
+        });
+
+    });
+
     $('[data-filter],[data-filter-field]').each(function extractFiltersFromDOM() {
         var t = $(this);
         var f = t.data('filters');
@@ -379,7 +518,7 @@ $(function() {
         var type = t.attr('data-filter');
         var flags = t.attr('data-filter-flags');
         f.push({
-            type: type ? type : (flags !== undefined ? 'regexp' : 'simple'),
+            type: type ? type : (flags !== undefined ? 'regexp' : 'is'),
             field: t.attr('data-filter-field'),
             pattern: t.attr('data-filter-pattern'),
             flags: flags,
@@ -396,7 +535,7 @@ $(function() {
                 if (num) {
                     if (exists) {
                         caller.data('filters', [{
-                            type: 'simple',
+                            type: 'is',
                             field: 'src',
                             pattern: num,
                         }]);
@@ -415,6 +554,6 @@ $(function() {
     });
 
     $('.placeholder').css('display', 'none');
-    $('.placeholder').css('color', 'gray');
-    $('.placeholder input').attr('disabled', 'true');
+    // $('.placeholder').css('color', 'gray');
+    // $('.placeholder input').attr('disabled', 'true');
 });

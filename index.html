@@ -19,45 +19,47 @@
     <p class="db">Database connection status:
         <span class="status">unknown</span>
     </p>
-    <p class="placeholder">Selection:
-        <input type="date" /> to
-        <input type="date" />
+    <div class="dateFilter">
+    <p>Selection: from
+        <input type="date" class="A"/> at <input type="time" class="A"/> to
+        <input type="date" class="B"/> at <input type="time" class="B"/>
+        (<input type="checkbox" name="bNow" checked/> now)
     </p>
-    <h2>Overview</h2>
-    <div class="overview">
-        <h3>Calls</h3>
-        <div class="calls">
-            <p data-filter="last">Last call at
-                <span data-field="calldate">YYYY-MM-DD hh:mm:ss</span> from
-                <span data-field="src">src</span> to
-                <span data-field="dst">dst</span> in context
-                <span data-field="dcontext">dcontext</span>, lasted
-                <span data-field="duration">000</span> seconds
-                (<span data-field="billsec">000</span> billed) with last application being
-                <span data-field="lastapp">lastapp</span>.
-            </p>
-            <h4>All</h4>
-            <ul class="all">
-                <li>Total:
-                    <span data-field="calldate" data-stat="count">N</span>
-                </li>
-                <li>Answered:
-                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
-                </li>
-                <li>Missed:
-                    <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
-                </li>
-            </ul>
-            <h4 class="placeholder">Inside</h4>
-            <h4 class="placeholder">Intern</h4>
-            <h4 class="placeholder">From outside</h4>
-            <h4 class="placeholder">To outside</h4>
+        <h2>Overview</h2>
+        <div class="overview">
+            <h3>Calls</h3>
+            <div class="calls">
+                <p data-filter="last">Last call at
+                    <span data-field="calldate">YYYY-MM-DD hh:mm:ss</span> from
+                    <span data-field="src">src</span> to
+                    <span data-field="dst">dst</span> in context
+                    <span data-field="dcontext">dcontext</span>, lasted
+                    <span data-field="duration">000</span> seconds (
+                    <span data-field="billsec">000</span> billed) with last application being
+                    <span data-field="lastapp">lastapp</span>.
+                </p>
+                <h4>All</h4>
+                <ul class="all">
+                    <li>Total:
+                        <span data-field="calldate" data-stat="count">N</span>
+                    </li>
+                    <li>Answered:
+                        <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                    </li>
+                    <li>Missed:
+                        <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                </ul>
+                <h4 class="placeholder">Inside</h4>
+                <h4 class="placeholder">Intern</h4>
+                <h4 class="placeholder">From outside</h4>
+                <h4 class="placeholder">To outside</h4>
+            </div>
         </div>
-    </div>
-    <div class="caller">
-        <h2>Stats for
-            <input type="text" name="name" />
-        </h2>
+        <div class="caller">
+            <h2>Stats for
+                <input type="text" name="name" />
+            </h2>
             <h3>As a caller</h3>
             <h4>Duration</h4>
             <p>Last:
@@ -84,6 +86,7 @@
 
             <h4>Last application</h4>
             <div data-field="lastapp" data-stat="donut"></div>
+        </div>
     </div>
 </body>
 
