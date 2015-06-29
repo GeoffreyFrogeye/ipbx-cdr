@@ -5,6 +5,7 @@ require '../vendor/autoload.php';
 $dotenv = new Dotenv\Dotenv(__DIR__.'/..');
 $dotenv->load();
 $dotenv->required(['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS']);
+$dotenv->required(['TIMEZONE']);
 
 $sql = new mysqli(getenv('DB_HOST'), getenv('DB_USER'), getenv('DB_PASS'), getenv('DB_NAME'));
 
