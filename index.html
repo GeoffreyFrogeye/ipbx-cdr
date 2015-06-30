@@ -4,14 +4,24 @@
 <head>
     <meta charset="utf-8">
     <title>IPBX CDR</title>
-    <script src="bower_components/jquery/dist/jquery.js"></script>
-    <script src="bower_components/eventEmitter/EventEmitter.js"></script>
-    <script src="bower_components/async/lib/async.js"></script>
-    <script src="bower_components/simple-statistics/src/simple_statistics.js"></script>
-    <script src="bower_components/d3/d3.js"></script>
-    <script src="bower_components/c3/c3.js"></script>
-    <script src="js/main.js"></script>
+    <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
+    <script type="text/javascript" src="bower_components/eventEmitter/EventEmitter.js"></script>
+    <script type="text/javascript" src="bower_components/async/lib/async.js"></script>
+    <script type="text/javascript" src="bower_components/simple-statistics/src/simple_statistics.js"></script>
+    <script type="text/javascript" src="bower_components/d3/d3.js"></script>
+    <script type="text/javascript" src="bower_components/c3/c3.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
     <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css" />
+    <!-- Table sorter -->
+    <link href="bower_components/jquery.tablesorter/css/theme.default.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/js/jquery.tablesorter.js"></script>
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/js/jquery.tablesorter.widgets.js"></script>
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/js/widgets/widget-pager.js"></script>
+
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/dist/js/extras/jquery.tablesorter.pager.min.js"></script>
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.css" rel="stylesheet" />
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.js"></script>
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/js/widgets/widget-filter-formatter-select2.js"></script>
 </head>
 
 <body>
@@ -20,11 +30,47 @@
         <span class="status">unknown</span>
     </p>
     <div class="dateFilter">
-    <p>Selection: from
-        <input type="date" class="A"/> at <input type="time" class="A"/> to
-        <input type="date" class="B"/> at <input type="time" class="B"/>
-        (<input type="checkbox" name="bNow" checked/> now)
-    </p>
+        <p>Selection: from
+            <input type="date" class="A" /> at
+            <input type="time" class="A" /> to
+            <input type="date" class="B" /> at
+            <input type="time" class="B" /> (
+            <input type="checkbox" name="bNow" checked/> now)
+        </p>
+        <div>
+            <h2>Call list</h2>
+            <div class="columnSelectorWrapper">
+                <input id="colSelect1" type="checkbox" class="hidden">
+                <label class="columnSelectorButton" for="colSelect1">Column</label>
+                <div id="columnSelector" class="columnSelector">
+                    <!-- this div is where the column selector is added -->
+                </div>
+            </div>
+            <table data-stat="table">
+                <thead>
+                    <th data-fieldname="calldate" data-sort="0">Date</th>
+                    <th data-fieldname="clid">Caller ID</th>
+                    <th data-fieldname="src">Source</th>
+                    <th data-fieldname="dst">Destination</th>
+                    <th data-fieldname="dcontext" data-filter="select2">Context</th>
+                    <th data-fieldname="channel">Channel</th>
+                    <th data-fieldname="dstchannel">DST Channel</th>
+                    <th data-fieldname="lastapp" data-filter="select2">Last Application</th>
+                    <th data-fieldname="lastdata">Last data</th>
+                    <th data-fieldname="duration">Duration</th>
+                    <th data-fieldname="billsec">Billed</th>
+                    <th data-fieldname="disposition" data-filter="select2">Disposition</th>
+                    <th data-fieldname="amaflags">AMAFLAGS</th>
+                    <th data-fieldname="accountcode">Account Code</th>
+                    <th data-fieldname="userfield">Userfield</th>
+                    <th data-fieldname="uniqueid">Unique ID</th>
+                    <th data-fieldname="linkedid">Linked ID</th>
+                    <th data-fieldname="sequence">Sequence</th>
+                    <th data-fieldname="peeraccount">Peer account</th>
+            </table>
+            <tbody>
+            </tbody>
+        </div>
         <h2>Overview</h2>
         <div class="overview">
             <h3>Calls</h3>

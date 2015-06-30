@@ -159,11 +159,18 @@ function queryDB(cb) {
         });
 }
 
+function parentData(el, includeEl) {
+    if (includeEl === undefined) includeEl = false;
+    var parents = $(el).parents(':data(calls)');
+    if (includeEl) parents = parents.addBack(':data(calls)');
+    parents = parents.last();
+    return parents.length ? parents.data('calls') : cdr.data;
+}
+
 function updateFilter(fil, cb) { // Update a single filter
     // Defining vars
     fil = $(fil);
-    var parentData = fil.parents(':data(calls)').first();
-    var calls = parentData.length ? parentData.data('calls') : cdr.data;
+    var calls = parentData(fil, false);
     var filterDef = fil.data('filters');
     if (!filterDef) filterDef = [];
 
@@ -280,122 +287,213 @@ function updateFilter(fil, cb) { // Update a single filter
         } else {
             async.filter(calls, function applyFilters(call, cbF) {
                 async.every(filters, function applyOneFilter(filter, cbev) {
-                    filter(call, function(res) {
-                        cbev(res);
-                    });
+                    if (typeof filter == 'function') {
+                        filter(call, function(res) {
+                            cbev(res);
+                        });
+                    }
                 }, cbF);
             }, onceFiltered);
         }
     });
 }
-
+a=[]
 function updateStat(el, cb) {
     el = $(el);
-    var parentData = el.parents(':data(calls)').addBack(':data(calls)').last();
-    var calls = parentData.length ? parentData.data('calls') : cdr.data;
-    if (calls && calls.length) {
-        calls = calls.transposeObjects();
-        var field = el.attr('data-field'),
-            stat = el.attr('data-stat'),
-            x = calls[field];
-        if (!x) {
-            cb("No such field " + field);
-        }
-        var numbers = typeof x[0] == 'number'; // Are numbers
+    var calls = parentData(el, true);
+    var stat = el.data('stat');
+    switch (stat) {
+        case 'table':
+            var thead = $('thead', el);
+            var fields = [];
+            $('th', thead).each(function(i, field) {
+                fields.push($(field));
+            });
+            var tbody = $('tbody', el);
+            if (!tbody.length) tbody = $('<tbody>').appendTo(el);
 
-        var occurs = null; // Calculates number of occurences
-        if (!numbers) {
-            occurs = x.reduce(function(occ, cur) {
-                if (isNaN(occ[cur])) {
-                    occ[cur] = 1;
+            function fillTbody(cbf) {
+                window.a.push(tbody);
+                tbody.empty();
+                async.each(calls, function addTr(call, cbm) {
+                    var tr = $('<tr>').appendTo(tbody);
+                    async.each(fields, function addTd(field, cbe2) {
+                        tr.append($('<td>').text(call[field.data('fieldname')]));
+                        cbe2();
+                    }, cbm);
+                }, cbf);
+            }
+
+            if (el.is('.tablesorter')) {
+                if (el.not('.tablesorter-stickyHeader')) {
+                    fillTbody(function updateTable() {
+                        el.trigger('update', [true, function(table) {
+                            cb();
+                        }]);
+                    });
                 } else {
-                    occ[cur]++;
+                    cb();
                 }
-                return occ;
-            }, {});
-        }
-
-
-        if (numbers && SS_X_FUN.indexOf(stat) != -1) {
-            el.text(ss[stat](x));
-        } else if (!numbers && C3_N_FUN.indexOf(stat) != -1) {
-            var columns = Object.keys(occurs).reduce(function assoc(memo, key) {
-                    memo.push([key, occurs[key]]);
-                    return memo;
-                }, []),
-                oldChart = el.data('chart');
-
-            if (oldChart) {
-                var columnsToUnload = Object.keys(oldChart.x())
-                    .diff(columns.reduce(function(memo, key) {
-                        memo.push(key[0]);
-                        return memo;
-                    }, []));
-                async.series([
-                    function(cba) {
-                        oldChart.load({
-                            columns: columns,
-                            // unload: columnsToUnload,
-                            done: cba,
-                        });
-                    },
-                    function(cba) {
-                        oldChart.unload({
-                            ids: columnsToUnload,
-                            done: cba,
-                        });
-                    }
-                ]);
             } else {
-                var chartSpecs = {
-                    data: {
-                        columns: columns,
-                        type: stat,
-                    },
-                    legend: {
-                        position: 'right'
-                    },
-                };
-                if (['pie', 'donut'].indexOf(stat) != -1) {
-                    chartSpecs[stat] = {
-                        label: {
-                            format: function(value) {
-                                return value;
-                            }
-                        }
+                fillTbody(function sortTable() {
+                    el.addClass('tablesorter');
+                    pagerTop = $('<div>')
+                        .addClass('.pager')
+                        .append($('<button>').text('«').addClass('first'))
+                        .append($('<button>').text('<').addClass('prev'))
+                        .append($('<span>').text('X to X of X rows').addClass('pagedisplay'))
+                        .append($('<button>').text('>').addClass('next'))
+                        .append($('<button>').text('»').addClass('last'))
+                        .append(
+                            $('<select>').addClass('pagesize')
+                            .append([10, 20, 30, 50, 100, 200, 500, 1000].map(function generateOption(nb) {
+                                return $('<option>').val(nb).text(nb);
+                            }))
+                        )
+                        .insertBefore(el);
+                    pagerBot = pagerTop.clone().insertAfter(el);
+                    var pagerOptions = {
+                        container: $.merge(pagerTop, pagerBot),
+                        removeRows: false,
+                        output: 'Calls {startRow} - {endRow} of {filteredRows} ({totalRows} total)',
                     };
+                    el
+                        .tablesorter({
+                            sortList: fields.map(function(field, i) {
+                                var dat = field.data('sort');
+                                if (dat !== undefined) {
+                                    return [i, dat];
+                                }
+                            }),
+                            widgets: ['zebra', 'filter'],
+                            widgetOptions: {
+                                filter_formatter: fields.map(function(field) {
+                                    switch (field.data('filter')) {
+                                        case 'select2':
+                                            return function($cell, indx) {
+                                                return $.tablesorter.filterFormatter.select2($cell, indx, {});
+                                            };
+                                        default:
+                                            return '';
+                                    }
+                                })
+                            },
+                        })
+                        .data('pagerOptions', pagerOptions)
+                        .tablesorterPager(pagerOptions);
+                    cb();
+                });
+            }
+            return;
+
+        case 'count':
+        case '#count':
+            el.text(calls ? calls.length : 0);
+            break;
+
+        default:
+            if (calls && calls.length) {
+                calls = calls.transposeObjects(); // Inversing table
+                var field = el.data('field'),
+                    x = calls[field];
+                if (!x) {
+                    cb("No such field " + field);
                 }
-                var chart = c3.generate(chartSpecs);
-                el.empty().append(chart.element).data('chart', chart);
+                var numbers = typeof x[0] == 'number'; // Are numbers
+
+                var occurs = null; // Calculates number of occurences
+                if (!numbers) {
+                    occurs = x.reduce(function(occ, cur) {
+                        if (isNaN(occ[cur])) {
+                            occ[cur] = 1;
+                        } else {
+                            occ[cur]++;
+                        }
+                        return occ;
+                    }, {});
+                }
+
+
+                if (numbers && SS_X_FUN.indexOf(stat) != -1) {
+                    // If numbering stat, use simple-statistics
+                    el.text(ss[stat](x));
+                } else if (!numbers && C3_N_FUN.indexOf(stat) != -1) {
+                    // If it's a N-chart
+                    var columns = Object.keys(occurs).reduce(function assoc(memo, key) {
+                            memo.push([key, occurs[key]]);
+                            return memo;
+                        }, []),
+                        oldChart = el.data('chart');
+
+                    if (oldChart) {
+                        var columnsToUnload = Object.keys(oldChart.x())
+                            .diff(columns.reduce(function(memo, key) {
+                                memo.push(key[0]);
+                                return memo;
+                            }, []));
+                        async.series([
+                            function(cba) {
+                                oldChart.load({
+                                    columns: columns,
+                                    // unload: columnsToUnload, // Too quick for C3 to handle
+                                    done: cba,
+                                });
+                            },
+                            function(cba) {
+                                oldChart.unload({
+                                    ids: columnsToUnload,
+                                    done: cba,
+                                });
+                            }
+                        ]);
+                    } else {
+                        var chartSpecs = {
+                            data: {
+                                columns: columns,
+                                type: stat,
+                            },
+                            legend: {
+                                position: 'right'
+                            },
+                        };
+                        if (['pie', 'donut'].indexOf(stat) != -1) {
+                            chartSpecs[stat] = {
+                                label: {
+                                    format: function(value) {
+                                        return value;
+                                    }
+                                }
+                            };
+                        }
+                        var chart = c3.generate(chartSpecs);
+                        el.empty().append(chart.element).data('chart', chart);
+                    }
+                } else {
+                    // Other type of stats
+                    var statType = (numbers ? '#' : '') + stat;
+                    switch (statType) {
+                        case 'undefined':
+                        case '#undefined':
+                        case 'first':
+                        case '#first':
+                            el.text(x[0]);
+                            break;
+
+                        case 'last':
+                        case '#last':
+                            el.text(x[x.length - 1]);
+                            break;
+
+                        default:
+                            cb("Unknown stat type " + statType);
+                            return;
+                    }
+                }
+            } else {
+                el.removeData();
+                el.text("No data");
             }
-        } else {
-            var statType = (numbers ? '#' : '') + stat;
-            switch (statType) {
-                case 'count':
-                case '#count':
-                    el.text(x.length);
-                    break;
-
-                case 'undefined':
-                case '#undefined':
-                case 'first':
-                case '#first':
-                    el.text(x[0]);
-                    break;
-
-                case 'last':
-                case '#last':
-                    el.text(x[x.length - 1]);
-                    break;
-
-                default:
-                    cb("Unknown stat type " + statType);
-                    return;
-            }
-        }
-    } else {
-        el.removeData();
-        el.text("No data");
+            break;
     }
     cb();
 }
@@ -476,7 +574,7 @@ $(function() {
 
         function setDate(els, date) {
             els[0].val(date.getFullYear() + '-' + ("0" + (date.getMonth() + 1)).slice(-2) + '-' + ("0" + date.getDate()).slice(-2));
-            els[1].val(("0" + (date.getHours() + 1)).slice(-2) + ':' + ("0" + (date.getMinutes() + 1)).slice(-2));
+            els[1].val(("0" + (date.getHours())).slice(-2) + ':' + ("0" + (date.getMinutes())).slice(-2));
         }
 
         setDate(B, new Date());
@@ -515,12 +613,12 @@ $(function() {
         var t = $(this);
         var f = t.data('filters');
         if (!f) f = [];
-        var type = t.attr('data-filter');
-        var flags = t.attr('data-filter-flags');
+        var type = t.data('filter');
+        var flags = t.data('filter-flags');
         f.push({
             type: type ? type : (flags !== undefined ? 'regexp' : 'is'),
-            field: t.attr('data-filter-field'),
-            pattern: t.attr('data-filter-pattern'),
+            field: t.data('filter-field'),
+            pattern: t.data('filter-pattern'),
             flags: flags,
         });
         t.data('filters', f);
