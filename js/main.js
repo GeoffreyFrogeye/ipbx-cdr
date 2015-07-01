@@ -173,6 +173,12 @@ $(function addFilters() {
 // STATS FUNCTIONS
 var SS_X_FUN = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
 var C3_N_FUN = ['bar', 'pie', 'donut'];
+var TIMESERIES_INTERVALS = {
+    names: ['yearly', 'monthly', 'daily', 'hourly', 'per minute', 'exact'],
+    cut: ['year', 'month', 'day', 'hour', 'minute', 'second'],
+    momentjs: ['YYYY', '-MM', '-DD', ' HH', ':mm', ':ss'],
+    c3js: ['%Y', '-%m', '-%d', ' %H', ':%M', ':%S'],
+};
 
 function codeFormat(input) {
     return {
@@ -183,7 +189,7 @@ function codeFormat(input) {
 
 function durationFormat(input) {
     var i = parseInt(input),
-        d = (new Date(i*1000));
+        d = (new Date(i * 1000));
     return {
         text: ("0" + (d.getUTCHours())).slice(-2) + ':' + ("0" + (d.getUTCMinutes())).slice(-2) + ':' + ("0" + (d.getUTCSeconds())).slice(-2)
     };
@@ -387,6 +393,8 @@ function updateFilter(fil, cb) { // Update a single filter
     });
 }
 
+var MAX_GRAPH_POINTS = 1000;
+
 function updateStat(el, cb) {
     el = $(el);
     var calls = parentData(el, true);
@@ -504,6 +512,7 @@ function updateStat(el, cb) {
 
         default:
             if (calls && calls.length) {
+                var callsO = calls;
                 calls = calls.transposeObjects(); // Inversing table
                 var field = el.data('field'),
                     x = calls[field];
@@ -524,8 +533,86 @@ function updateStat(el, cb) {
                     }, {});
                 }
 
+                if (numbers && stat == 'timeseries') { // OPTZ Group all chart handling
+                    // If XY chart with X as time
 
-                if (numbers && SS_X_FUN.indexOf(stat) != -1) {
+                    // OPTZ Just update data if needed
+
+                    var timeseriesInterval = el.closest(':data(timeseriesInterval)').data('timeseriesInterval');
+
+                    function getTimeFormat(formatter) {
+                        if (!TIMESERIES_INTERVALS[formatter]) {
+                            console.error("Unknown time formatter" + formatter);
+                        } else {
+                            var string = '';
+                            for (var i = 0; i <= timeseriesInterval; i++) {
+                                string += TIMESERIES_INTERVALS[formatter][i];
+                            }
+                            return string;
+                        }
+                    }
+
+                    var columns = [
+                        ['x'],
+                        [field]
+                    ];
+                    var dates = {};
+                    var minMom, maxMom; // Keep track of mini and maximum to fill the gaps
+                    callsO.map(function(val, i) {
+                        var mom = moment(val.calldate);
+                        if (!minMom) {
+                            minMom = maxMom = mom;
+                        } else {
+                            minMom = minMom < mom ? minMom : mom;
+                            maxMom = maxMom > mom ? maxMom : mom;
+                        }
+                        var date = mom.format(getTimeFormat('momentjs'));
+                        if (!dates[date]) {
+                            dates[date] = [];
+                        }
+                        dates[date].push(val[field]);
+                    });
+
+                    cut = TIMESERIES_INTERVALS.cut[timeseriesInterval];
+                    var points = Math.abs(maxMom.diff(minMom, cut));
+
+                    if (points > MAX_GRAPH_POINTS) {
+                        console.warn("Skipping graphic that would have " + points + "/" + MAX_GRAPH_POINTS + "points");
+                        el.empty().text("Too much data to display, please use at least " + Math.ceil(points / MAX_GRAPH_POINTS) + " times less data");
+                        cb(true); // TODO Better error handling
+                        return;
+                    }
+
+                    var mom = minMom.startOf(cut);
+                    maxMom = maxMom.startOf(cut);
+
+                    while (mom <= maxMom) {
+                        date = mom.format(getTimeFormat('momentjs'));
+                        columns[0].push(date);
+                        columns[1].push(dates[date] ? ss.sum(dates[date]) : 0);
+                        mom.add(1, cut);
+                    }
+
+                    var chart = c3.generate({
+                        data: {
+                            x: 'x',
+                            xFormat: getTimeFormat('c3js'),
+                            columns: columns
+                        },
+                        axis: {
+                            x: {
+                                type: 'timeseries',
+                                tick: {
+                                    format: getTimeFormat('c3js'),
+                                }
+                            }
+                        },
+                        zoom: {
+                            enabled: true
+                        },
+                    });
+                    el.empty().append(chart.element);
+                } else if (numbers && SS_X_FUN.indexOf(stat) != -1) {
                     // If numbering stat, use simple-statistics
                     el.text(ss[stat](x));
                 } else if (!numbers && C3_N_FUN.indexOf(stat) != -1) {
@@ -592,7 +679,7 @@ function updateStat(el, cb) {
 
                         case 'last':
                         case '#last':
-                            formatEl(el, x[x.length-1], field);
+                            formatEl(el, x[x.length - 1], field);
                             break;
 
                         default:
@@ -716,6 +803,27 @@ $(function() {
 
         cdr.once('freshData', function(calls) {
             setDate(A, new Date(calls[0].calldate));
+        });
+
+        var TIMESERIES_DEFAULT_INTERVAL = 2;
+        $('select[name=timeseriesInterval]', filter).each(function initTimeSeriesValues() {
+            select = $(this);
+            TIMESERIES_INTERVALS.names.map(function addOption(name, i) {
+                var op = $('<option>').val(i).text(name);
+                if (i == TIMESERIES_DEFAULT_INTERVAL) op.attr('selected', true);
+                select.append(op);
+            });
+
+            function changeTimeSeriesValue(value) {
+                filter.data('timeseriesInterval', value);
+                changed($('[data-stat=timeseries]'));
+            }
+
+            select.bind('change', function changeTimeSeriesValueEv() {
+                changeTimeSeriesValue($(this).val());
+            });
+
+            changeTimeSeriesValue(TIMESERIES_DEFAULT_INTERVAL);
         });
 
     });

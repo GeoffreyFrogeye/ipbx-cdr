@@ -10,6 +10,7 @@
     <script type="text/javascript" src="bower_components/simple-statistics/src/simple_statistics.js"></script>
     <script type="text/javascript" src="bower_components/d3/d3.js"></script>
     <script type="text/javascript" src="bower_components/c3/c3.js"></script>
+    <script type="text/javascript" src="bower_components/moment/min/moment-with-locales.js"></script>
     <script type="text/javascript" src="js/main.js"></script>
     <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css" />
     <!-- Table sorter -->
@@ -36,7 +37,8 @@
             <input type="time" class="A" /> to
             <input type="date" class="B" /> at
             <input type="time" class="B" /> (
-            <input type="checkbox" name="bNow" checked/> now)
+            <input type="checkbox" name="bNow" checked/> now)<br/>
+            Group graph times <select name="timeseriesInterval"></select>
         </p>
         <div>
             <h2>Call list</h2>
@@ -121,6 +123,10 @@
             <p>Sum:
                 <span data-field="billsec" data-stat="sum"></span>
             </p>
+
+            <h4>Calls</h4>
+            <div data-field="duration" data-stat="timeseries"></div>
+
             <h4>Destinations</h4>
             <div data-field="dst" data-stat="pie"></div>
 
