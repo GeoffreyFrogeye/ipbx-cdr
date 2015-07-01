@@ -22,6 +22,7 @@
     <link href="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.css" rel="stylesheet" />
     <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/select2/3.4.6/select2.min.js"></script>
     <script type="text/javascript" src="bower_components/jquery.tablesorter/js/widgets/widget-filter-formatter-select2.js"></script>
+    <script type="text/javascript" src="bower_components/jquery.tablesorter/js/widgets/widget-columnSelector.js"></script>
 </head>
 
 <body>
@@ -39,34 +40,27 @@
         </p>
         <div>
             <h2>Call list</h2>
-            <div class="columnSelectorWrapper">
-                <input id="colSelect1" type="checkbox" class="hidden">
-                <label class="columnSelectorButton" for="colSelect1">Column</label>
-                <div id="columnSelector" class="columnSelector">
-                    <!-- this div is where the column selector is added -->
-                </div>
-            </div>
             <table data-stat="table">
                 <thead>
-                    <th data-fieldname="calldate" data-sort="0">Date</th>
-                    <th data-fieldname="clid">Caller ID</th>
-                    <th data-fieldname="src">Source</th>
-                    <th data-fieldname="dst">Destination</th>
-                    <th data-fieldname="dcontext" data-filter="select2">Context</th>
-                    <th data-fieldname="channel">Channel</th>
-                    <th data-fieldname="dstchannel">DST Channel</th>
-                    <th data-fieldname="lastapp" data-filter="select2">Last Application</th>
-                    <th data-fieldname="lastdata">Last data</th>
-                    <th data-fieldname="duration">Duration</th>
-                    <th data-fieldname="billsec">Billed</th>
-                    <th data-fieldname="disposition" data-filter="select2">Disposition</th>
-                    <th data-fieldname="amaflags">AMAFLAGS</th>
-                    <th data-fieldname="accountcode">Account Code</th>
-                    <th data-fieldname="userfield">Userfield</th>
-                    <th data-fieldname="uniqueid">Unique ID</th>
-                    <th data-fieldname="linkedid">Linked ID</th>
-                    <th data-fieldname="sequence">Sequence</th>
-                    <th data-fieldname="peeraccount">Peer account</th>
+                    <th data-priority="critical" data-fieldname="calldate" data-sort="0">Date</th>
+                    <th data-priority="critical" data-fieldname="clid">Caller ID</th>
+                    <th data-priority="2" data-fieldname="src">Source</th>
+                    <th data-priority="critical" data-fieldname="dst">Destination</th>
+                    <th data-priority="critical" data-fieldname="duration">Duration</th>
+                    <th data-priority="3" data-fieldname="billsec">Billed</th>
+                    <th data-priority="3" data-fieldname="disposition" data-filter="select2">Disposition</th>
+                    <th data-priority="2" data-fieldname="lastapp" data-filter="select2">Last Application</th>
+                    <th data-priority="3" data-fieldname="lastdata">Last data</th>
+                    <th data-priority="4" data-fieldname="dcontext" data-filter="select2">Context</th>
+                    <th data-priority="4" data-fieldname="sequence">Sequence</th>
+                    <th data-priority="4" data-fieldname="uniqueid">Unique ID</th>
+                    <th data-priority="4" data-fieldname="linkedid">Linked ID</th>
+                    <th data-priority="5" data-fieldname="channel">Channel</th>
+                    <th data-priority="5" data-fieldname="dstchannel">DST Channel</th>
+                    <th data-priority="6" data-fieldname="amaflags">AMAFLAGS</th>
+                    <th data-priority="6" data-fieldname="accountcode">Account Code</th>
+                    <th data-priority="6" data-fieldname="userfield">Userfield</th>
+                    <th data-priority="6" data-fieldname="peeraccount">Peer account</th>
             </table>
             <tbody>
             </tbody>

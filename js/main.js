@@ -139,9 +139,98 @@ Array.prototype.transposeObjects = function() {
     }
 }; // From http://stackoverflow.com/a/17428705
 
+$(function addFilters() {
+    $.tablesorter.filter.types.start = function(config, data) {
+        if (/^\^/.test(data.iFilter)) {
+            return data.iExact.indexOf(data.iFilter.substring(1)) === 0;
+        }
+        return null;
+    }; // From http://mottie.github.io/tablesorter/docs/example-widget-filter-custom-search.html
+
+    $.tablesorter.filter.types.end = function(config, data) {
+        if (/\$$/.test(data.iFilter)) {
+            var filter = data.iFilter,
+                filterLength = filter.length - 1,
+                removedSymbol = filter.substring(0, filterLength),
+                exactLength = data.iExact.length;
+            return data.iExact.lastIndexOf(removedSymbol) + filterLength === exactLength;
+        }
+        return null;
+    }; // From http://mottie.github.io/tablesorter/docs/example-widget-filter-custom-search.html
+
+    $.tablesorter.addParser({
+        id: 'date',
+        is: function(s, table, cell, $cell) {
+            return false;
+        },
+        format: function(s, table, cell, cellIndex) {
+            return (new Date($('time', cell).attr('datetime'))).getTime();
+        },
+        type: 'numeric'
+    });
+});
+
 // STATS FUNCTIONS
 var SS_X_FUN = ['mean', 'sum', 'mode', 'variance', 'standard_deviation', 'standard_deviation', 'median', 'geometric_mean', 'harmonic_mean', 'root_mean_square', 'min', 'max', 'sample_variance'];
 var C3_N_FUN = ['bar', 'pie', 'donut'];
+
+function codeFormat(input) {
+    return {
+        text: input,
+        dom: $('<code>').text(input)
+    };
+}
+
+function durationFormat(input) {
+    var i = parseInt(input),
+        d = (new Date(i*1000));
+    return {
+        text: ("0" + (d.getUTCHours())).slice(-2) + ':' + ("0" + (d.getUTCMinutes())).slice(-2) + ':' + ("0" + (d.getUTCSeconds())).slice(-2)
+    };
+}
+
+var FORMATTERS = {
+    clid: function clidFormat(input) {
+        return {
+            text: input.split('"')[1],
+        };
+    },
+    calldate: function calldateFormat(input) {
+        var i = parseInt(input),
+            d = new Date(i);
+        return {
+            dom: $('<time>').attr('datetime', d.toISOString()).text(d.toLocaleString()),
+            text: d.toLocaleString(),
+        };
+    },
+    duration: durationFormat,
+    billsec: durationFormat,
+    disposition: function dispositionFormat(input) {
+        return {
+            text: input.replace(/\w\S*/g, function(txt) {
+                return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+            }), // From http://stackoverflow.com/a/4878800
+        };
+    },
+    channel: codeFormat,
+    dstchannel: codeFormat,
+    lastdata: codeFormat,
+};
+
+function formatEl(el, content, field) {
+    el.empty();
+    if (FORMATTERS[field]) {
+        var data = FORMATTERS[field](content);
+        if (data.dom) {
+            el.append(data.dom);
+        } else {
+            el.text(data.text);
+        }
+    } else {
+        el.text(content);
+    }
+
+}
 
 function queryDB(cb) {
     var status = $('.db .status');
@@ -297,7 +386,7 @@ function updateFilter(fil, cb) { // Update a single filter
         }
     });
 }
-a=[]
+
 function updateStat(el, cb) {
     el = $(el);
     var calls = parentData(el, true);
@@ -313,12 +402,14 @@ function updateStat(el, cb) {
             if (!tbody.length) tbody = $('<tbody>').appendTo(el);
 
             function fillTbody(cbf) {
-                window.a.push(tbody);
                 tbody.empty();
                 async.each(calls, function addTr(call, cbm) {
                     var tr = $('<tr>').appendTo(tbody);
                     async.each(fields, function addTd(field, cbe2) {
-                        tr.append($('<td>').text(call[field.data('fieldname')]));
+                        var td = $('<td>');
+                        var fieldname = field.data('fieldname');
+                        formatEl(td, call[fieldname], fieldname);
+                        tr.append(td);
                         cbe2();
                     }, cbm);
                 }, cbf);
@@ -337,11 +428,12 @@ function updateStat(el, cb) {
             } else {
                 fillTbody(function sortTable() {
                     el.addClass('tablesorter');
+                    var columnSelector = $('<div>').insertBefore(el);
                     pagerTop = $('<div>')
                         .addClass('.pager')
                         .append($('<button>').text('«').addClass('first'))
                         .append($('<button>').text('<').addClass('prev'))
-                        .append($('<span>').text('X to X of X rows').addClass('pagedisplay'))
+                        .append($('<span>').text('Calls X - X of X (X total)').addClass('pagedisplay'))
                         .append($('<button>').text('>').addClass('next'))
                         .append($('<button>').text('»').addClass('last'))
                         .append(
@@ -352,20 +444,26 @@ function updateStat(el, cb) {
                         )
                         .insertBefore(el);
                     pagerBot = pagerTop.clone().insertAfter(el);
-                    var pagerOptions = {
-                        container: $.merge(pagerTop, pagerBot),
-                        removeRows: false,
-                        output: 'Calls {startRow} - {endRow} of {filteredRows} ({totalRows} total)',
-                    };
                     el
                         .tablesorter({
                             sortList: fields.map(function(field, i) {
                                 var dat = field.data('sort');
                                 if (dat !== undefined) {
                                     return [i, dat];
+                                } else {
+                                    return '';
                                 }
                             }),
-                            widgets: ['zebra', 'filter'],
+                            headers: fields.map(function(field) {
+                                if (field.data('fieldname') == 'calldate') {
+                                    return {
+                                        sorter: 'date'
+                                    };
+                                } else {
+                                    return '';
+                                }
+                            }),
+                            widgets: ['zebra', 'filter', 'columnSelector'],
                             widgetOptions: {
                                 filter_formatter: fields.map(function(field) {
                                     switch (field.data('filter')) {
@@ -376,11 +474,24 @@ function updateStat(el, cb) {
                                         default:
                                             return '';
                                     }
-                                })
+                                }),
+                                columnSelector_container: columnSelector,
+                                columnSelector_layout: '<label><input type="checkbox">{name}</label>',
+                                columnSelector_name: 'data-selector-name',
+
+                                columnSelector_mediaquery: true,
+                                columnSelector_mediaqueryName: 'Auto',
+                                columnSelector_mediaqueryState: true,
+                                columnSelector_breakpoints: ['20em', '30em', '40em', '50em', '60em', '70em'],
+                                // OPTZ Generate correct breakpoints so it never scrolls
+                                columnSelector_priority: 'data-priority',
                             },
                         })
-                        .data('pagerOptions', pagerOptions)
-                        .tablesorterPager(pagerOptions);
+                        .tablesorterPager({
+                            container: $.merge(pagerTop, pagerBot),
+                            removeRows: false,
+                            output: 'Calls {startRow} - {endRow} of {filteredRows} ({totalRows} total)',
+                        });
                     cb();
                 });
             }
@@ -476,12 +587,12 @@ function updateStat(el, cb) {
                         case '#undefined':
                         case 'first':
                         case '#first':
-                            el.text(x[0]);
+                            formatEl(el, x[0], field);
                             break;
 
                         case 'last':
                         case '#last':
-                            el.text(x[x.length - 1]);
+                            formatEl(el, x[x.length-1], field);
                             break;
 
                         default:
