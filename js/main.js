@@ -1,10 +1,9 @@
 $ = jQuery = require('jquery');
-window.$ = $;
-var ss = require('simple-statistics');
-var EventEmitter = require('events').EventEmitter;
-var async = require('async');
-var c3 = require('c3');
-var moment = require('moment');
+ss = require('simple-statistics');
+EventEmitter = require('events').EventEmitter;
+async = require('async');
+c3 = require('c3');
+moment = require('moment');
 // var select2 = require('select2'); // TODO
 
 // CDR OBJECT
@@ -244,493 +243,501 @@ var CUSTOM_FIELDS = {
     }
 };
 
-function formatEl(el, content, field) {
-    el.empty();
-    if (FORMATTERS[field]) {
-        var data = FORMATTERS[field](content);
-        if (data.dom) {
-            el.append(data.dom);
-        } else {
-            el.text(data.text);
-        }
-    } else {
-        el.text(content);
-    }
-
-}
-
-function queryDB(cb) {
-    var status = $('.db .status');
-    status.text('querying...');
-    $.get('ajax/db')
-        .done(function() {
-            status.text('OK');
-        })
-        .fail(function(xhr) {
-            status.text('failing');
-            console.error(xhr.responseText);
-        })
-        .always(function(xhr) {
-            cb(xhr.responseText);
-        });
-}
-
-function parentData(el, includeEl) {
-    if (includeEl === undefined) includeEl = false;
-    var parents = $(el).parents(':data(calls)');
-    if (includeEl) parents = parents.addBack(':data(calls)');
-    parents = parents.last();
-    return parents.length ? parents.data('calls') : cdr.data;
-}
-
-function updateFilter(fil, cb) { // Update a single filter
-    // Defining vars
-    fil = $(fil);
-    var calls = parentData(fil, false);
-    var filterDef = fil.data('filters');
-    if (!filterDef) filterDef = [];
-
-    function onceFiltered(calls) {
-        fil.data('calls', calls);
-        if (cb) cb(null, calls);
-    }
-
-    if (!calls.length) {
-        onceFiltered([]);
-        return;
-    }
-
-    // Defining filter functions
-    async.map(filterDef, function findFilterFunction(fl, cbe) {
-        var val = (function findFilterFunctionSync() {
-            switch (fl.type) {
-                case 'is':
-                case 'not':
-                case 'regexp':
-                    // Comparison, need pattern
-                    if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
-                    if (!fl.pattern) return "No pattern for filter " + fl.field;
-
-                    switch (fl.type) {
-                        case 'is':
-                            return function isFilter(call, cbf) {
-                                cbf(call[fl.field] == fl.pattern);
-                            };
-                        case 'not':
-                            return function notFilter(call, cbf) {
-                                cbf(call[fl.field] != fl.pattern);
-                            };
-                        case 'regexp':
-                            var regexp = new RegExp(fl.pattern, fl.flags);
-                            return function regexpFilter(call, cbf) {
-                                cbf(call[fl.field].match(regexp));
-                            };
-
-                        default:
-                            return "Filter type " + fl.type + "declared as string comparer but no handler defined";
-                    }
-                    break;
-
-                case '==':
-                case '!=':
-                case '>':
-                case '<':
-                case '>=':
-                case '<=':
-                    // Number comparison, need number pattern
-                    if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
-                    var pat = parseFloat(fl.pattern);
-                    if (isNaN(pat)) return "Not a number pattern for filter " + fl.field;
-
-                    switch (fl.type) {
-                        case '==':
-                            return function eqFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) == pat);
-                            };
-                        case '!=':
-                            return function neqFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) != pat);
-                            };
-                        case '>':
-                            return function gtFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) > pat);
-                            };
-                        case '<':
-                            return function ltFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) < pat);
-                            };
-                        case '>=':
-                            return function getFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) >= pat);
-                            };
-                        case '<=':
-                            return function letFilter(call, cbf) {
-                                cbf(parseFloat(call[fl.field]) <= pat);
-                            };
-                        default:
-                            return "Filter type " + fl.type + "declared as number comparer but no handler defined";
-                    }
-
-                    break;
-
-                case 'first':
-                    // OPTZ Better handling
-                    return function firstFilter(call, cbf) {
-                        cbf(call == calls[0]);
-                    };
-
-                case 'last':
-                    // OPTZ Better handling
-                    return function lastFilter(call, cbf) {
-                        cbf(call == calls[calls.length - 1]);
-                    };
-
-                default:
-                    cb("Unknown filter type " + fl.type);
-            }
-        })();
-
-        if (typeof val == 'function') {
-            cbe(null, val);
-        } else {
-            cbe(val);
-        }
-
-    }, function executeFilters(err, filters) {
-        if (err) {
-            console.warn(err);
-            fil.data('calls', []);
-        } else {
-            async.filter(calls, function applyFilters(call, cbF) {
-                async.every(filters, function applyOneFilter(filter, cbev) {
-                    if (typeof filter == 'function') {
-                        filter(call, function(res) {
-                            cbev(res);
-                        });
-                    }
-                }, cbF);
-            }, onceFiltered);
-        }
-    });
-}
-
 var MAX_GRAPH_POINTS = 1000;
 
-function updateStat(el, cb) {
-    el = $(el);
-    var calls = parentData(el, true);
-    var stat = el.data('stat');
-    switch (stat) {
-        case 'table':
-            var thead = $('thead', el);
-            var fields = [];
-            $('th', thead).each(function(i, field) {
-                fields.push($(field));
-            });
-            var tbody = $('tbody', el);
-            if (!tbody.length) tbody = $('<tbody>').appendTo(el);
 
-            function fillTbody(cbf) {
-                tbody.empty();
-                async.each(calls, function addTr(call, cbm) {
-                    var tr = $('<tr>').appendTo(tbody);
-                    async.each(fields, function addTd(field, cbe2) {
-                        var td = $('<td>');
-                        var fieldname = field.data('fieldname');
-                        formatEl(td, call[fieldname], fieldname);
-                        tr.append(td);
-                        cbe2();
-                    }, cbm);
-                }, cbf);
-            }
-
-            if (el.is('.tablesorter')) {
-                if (el.not('.tablesorter-stickyHeader')) {
-                    fillTbody(function updateTable() {
-                        el.trigger('update', [true, function(table) {
-                            cb();
-                        }]);
-                    });
-                } else {
-                    cb();
-                }
-            } else {
-                fillTbody(function sortTable() {
-                    el.addClass('tablesorter');
-                    var columnSelector = $('<div>').insertBefore(el);
-                    pagerTop = $('<div>')
-                        .addClass('.pager')
-                        .append($('<button>').text('«').addClass('first'))
-                        .append($('<button>').text('<').addClass('prev'))
-                        .append($('<span>').text('Calls X - X of X (X total)').addClass('pagedisplay'))
-                        .append($('<button>').text('>').addClass('next'))
-                        .append($('<button>').text('»').addClass('last'))
-                        .append(
-                            $('<select>').addClass('pagesize')
-                            .append([10, 20, 30, 50, 100, 200, 500, 1000].map(function generateOption(nb) {
-                                return $('<option>').val(nb).text(nb);
-                            }))
-                        )
-                        .insertBefore(el);
-                    pagerBot = pagerTop.clone().insertAfter(el);
-                    el
-                        .tablesorter({
-                            sortList: fields.map(function(field, i) {
-                                var dat = field.data('sort');
-                                if (dat !== undefined) {
-                                    return [i, dat];
-                                } else {
-                                    return '';
-                                }
-                            }),
-                            headers: fields.map(function(field) {
-                                if (field.data('fieldname') == 'calldate') {
-                                    return {
-                                        sorter: 'date'
-                                    };
-                                } else {
-                                    return '';
-                                }
-                            }),
-                            widgets: ['zebra', 'filter', 'columnSelector'],
-                            widgetOptions: {
-                                filter_formatter: fields.map(function(field) {
-                                    switch (field.data('searcher')) {
-                                        case 'select2':
-                                            return function($cell, indx) {
-                                                return $.tablesorter.filterFormatter.select2($cell, indx, {});
-                                            };
-                                        default:
-                                            return '';
-                                    }
-                                }),
-                                columnSelector_container: columnSelector,
-                                columnSelector_layout: '<label><input type="checkbox">{name}</label>',
-                                columnSelector_name: 'data-selector-name',
-
-                                columnSelector_mediaquery: true,
-                                columnSelector_mediaqueryName: 'Auto',
-                                columnSelector_mediaqueryState: true,
-                                columnSelector_breakpoints: ['20em', '30em', '40em', '50em', '60em', '70em'],
-                                // OPTZ Generate correct breakpoints so it never scrolls
-                                columnSelector_priority: 'data-priority',
-                            },
-                        })
-                        .tablesorterPager({
-                            container: $.merge(pagerTop, pagerBot),
-                            removeRows: false,
-                            output: 'Calls {startRow} - {endRow} of {filteredRows} ({totalRows} total)',
-                        });
-                    cb();
-                });
-            }
-            return;
-
-        case 'count':
-        case '#count':
-            el.text(calls ? calls.length : 0);
-            break;
-
-        default:
-            if (calls && calls.length) {
-                var callsO = calls;
-                calls = calls.transposeObjects(); // Inversing table
-                var field = el.data('field'),
-                    x = calls[field];
-                if (!x) {
-                    cb("No such field " + field);
-                }
-                var numbers = typeof x[0] == 'number'; // Are numbers
-
-                var occurs = null; // Calculates number of occurences
-                if (!numbers) {
-                    occurs = x.reduce(function(occ, cur) {
-                        if (isNaN(occ[cur])) {
-                            occ[cur] = 1;
-                        } else {
-                            occ[cur]++;
-                        }
-                        return occ;
-                    }, {});
-                }
-
-                if (numbers && stat == 'timeseries') { // OPTZ Group all chart handling
-                    // If XY chart with X as time
-
-                    // OPTZ Just update data if needed
-
-                    var timeseriesInterval = el.closest(':data(timeseriesInterval)').data('timeseriesInterval');
-
-                    function getTimeFormat(formatter) {
-                        if (!TIMESERIES_INTERVALS[formatter]) {
-                            console.error("Unknown time formatter" + formatter);
-                        } else {
-                            var string = '';
-                            for (var i = 0; i <= timeseriesInterval; i++) {
-                                string += TIMESERIES_INTERVALS[formatter][i];
-                            }
-                            return string;
-                        }
-                    }
-
-                    var columns = [
-                        ['x'],
-                        [field]
-                    ];
-                    var dates = {};
-                    var minMom, maxMom; // Keep track of mini and maximum to fill the gaps
-                    callsO.map(function(val, i) {
-                        var mom = moment(val.calldate);
-                        if (!minMom) {
-                            minMom = maxMom = mom;
-                        } else {
-                            minMom = minMom < mom ? minMom : mom;
-                            maxMom = maxMom > mom ? maxMom : mom;
-                        }
-                        var date = mom.format(getTimeFormat('momentjs'));
-                        if (!dates[date]) {
-                            dates[date] = [];
-                        }
-                        dates[date].push(val[field]);
-                    });
-
-                    cut = TIMESERIES_INTERVALS.cut[timeseriesInterval];
-                    var points = Math.abs(maxMom.diff(minMom, cut));
-
-                    if (points > MAX_GRAPH_POINTS) {
-                        console.warn("Skipping graphic that would have " + points + "/" + MAX_GRAPH_POINTS + "points");
-                        el.empty().text("Too much data to display, please use at least " + Math.ceil(points / MAX_GRAPH_POINTS) + " times less data");
-                        cb(true); // TODO Better error handling
-                        return;
-                    }
-
-                    var mom = minMom.startOf(cut);
-                    maxMom = maxMom.startOf(cut);
-
-                    while (mom <= maxMom) {
-                        date = mom.format(getTimeFormat('momentjs'));
-                        columns[0].push(date);
-                        columns[1].push(dates[date] ? ss.sum(dates[date]) : 0);
-                        mom.add(1, cut);
-                    }
-
-                    var chart = c3.generate({
-                        data: {
-                            x: 'x',
-                            xFormat: getTimeFormat('c3js'),
-                            columns: columns
-                        },
-                        axis: {
-                            x: {
-                                type: 'timeseries',
-                                tick: {
-                                    format: getTimeFormat('c3js'),
-                                }
-                            }
-                        },
-                        zoom: {
-                            enabled: true
-                        },
-                    });
-                    el.empty().append(chart.element);
-                } else if (numbers && SS_X_FUN.indexOf(stat) != -1) {
-                    // If numbering stat, use simple-statistics
-                    el.text(ss[stat](x));
-                } else if (!numbers && C3_N_FUN.indexOf(stat) != -1) {
-                    // If it's a N-chart
-                    var columns = Object.keys(occurs).reduce(function assoc(memo, key) {
-                            memo.push([key, occurs[key]]);
-                            return memo;
-                        }, []),
-                        oldChart = el.data('chart');
-
-                    if (oldChart) {
-                        var columnsToUnload = Object.keys(oldChart.x())
-                            .diff(columns.reduce(function(memo, key) {
-                                memo.push(key[0]);
-                                return memo;
-                            }, []));
-                        async.series([
-                            function(cba) {
-                                oldChart.load({
-                                    columns: columns,
-                                    // unload: columnsToUnload, // Too quick for C3 to handle
-                                    done: cba,
-                                });
-                            },
-                            function(cba) {
-                                oldChart.unload({
-                                    ids: columnsToUnload,
-                                    done: cba,
-                                });
-                            }
-                        ]);
-                    } else {
-                        var chartSpecs = {
-                            data: {
-                                columns: columns,
-                                type: stat,
-                            },
-                            legend: {
-                                position: 'right'
-                            },
-                        };
-                        if (['pie', 'donut'].indexOf(stat) != -1) {
-                            chartSpecs[stat] = {
-                                label: {
-                                    format: function(value) {
-                                        return value;
-                                    }
-                                }
-                            };
-                        }
-                        var chart = c3.generate(chartSpecs);
-                        el.empty().append(chart.element).data('chart', chart);
-                    }
-                } else {
-                    // Other type of stats
-                    var statType = (numbers ? '#' : '') + stat;
-                    switch (statType) {
-                        case 'undefined':
-                        case '#undefined':
-                        case 'first':
-                        case '#first':
-                            formatEl(el, x[0], field);
-                            break;
-
-                        case 'last':
-                        case '#last':
-                            formatEl(el, x[x.length - 1], field);
-                            break;
-
-                        default:
-                            cb("Unknown stat type " + statType);
-                            return;
-                    }
-                }
-            } else {
-                el.removeData();
-                el.text("No data");
-            }
-            break;
-    }
-    cb();
-}
-
-function changed(el, cb) {
-    async.each($(':data(filters)', el).addBack(':data(filters)'), function updateFilters(el, cbe) {
-        updateFilter(el, cbe);
-    }, function() {
-        async.each($('[data-stat],[data-field]'), function updateStats(el, cbe) {
-            updateStat(el, cbe);
-        }, cb);
-    });
-}
 
 // MAIN
 var cdr = null;
 
+
+
 $(function() {
+
+    function formatEl(el, content, field) {
+        el.empty();
+        if (FORMATTERS[field]) {
+            var data = FORMATTERS[field](content);
+            if (data.dom) {
+                el.append(data.dom);
+            } else {
+                el.text(data.text);
+            }
+        } else {
+            el.text(content);
+        }
+
+    }
+
+    function queryDB(cb) {
+        var status = $('.db .status');
+        status.text('querying...');
+        $.get('ajax/db')
+            .done(function() {
+                status.text('OK');
+            })
+            .fail(function(xhr) {
+                status.text('failing');
+                console.error(xhr.responseText);
+            })
+            .always(function(xhr) {
+                cb(xhr.responseText);
+            });
+    }
+
+    function parentData(el, includeEl) {
+        if (includeEl === undefined) includeEl = false;
+        var parents = $(el).parents(':data(calls)');
+        if (includeEl) parents = parents.addBack(':data(calls)');
+        parents = parents.last();
+        return parents.length ? parents.data('calls') : cdr.data;
+    }
+
+    function updateFilter(fil, cb) { // Update a single filter
+        // Defining vars
+        fil = $(fil);
+        var calls = parentData(fil, false);
+        var filterDef = fil.data('filters');
+        if (!filterDef) filterDef = [];
+
+        function onceFiltered(calls) {
+            fil.data('calls', calls);
+            if (cb) cb(null, calls);
+        }
+
+        if (!calls.length) {
+            onceFiltered([]);
+            return;
+        }
+
+        // Defining filter functions
+        async.map(filterDef, function findFilterFunction(fl, cbe) {
+            var val = (function findFilterFunctionSync() {
+                switch (fl.type) {
+                    case 'is':
+                    case 'not':
+                    case 'regexp':
+                        // Comparison, need pattern
+                        if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
+                        if (!fl.pattern) return "No pattern for filter " + fl.field;
+
+                        switch (fl.type) {
+                            case 'is':
+                                return function isFilter(call, cbf) {
+                                    cbf(call[fl.field] == fl.pattern);
+                                };
+                            case 'not':
+                                return function notFilter(call, cbf) {
+                                    cbf(call[fl.field] != fl.pattern);
+                                };
+                            case 'regexp':
+                                var regexp = new RegExp(fl.pattern, fl.flags);
+                                return function regexpFilter(call, cbf) {
+                                    cbf(call[fl.field].match(regexp));
+                                };
+
+                            default:
+                                return "Filter type " + fl.type + "declared as string comparer but no handler defined";
+                        }
+                        break;
+
+                    case '==':
+                    case '!=':
+                    case '>':
+                    case '<':
+                    case '>=':
+                    case '<=':
+                        // Number comparison, need number pattern
+                        if (!calls[0][fl.field]) return "No such field for filter " + fl.type;
+                        var pat = parseFloat(fl.pattern);
+                        if (isNaN(pat)) return "Not a number pattern for filter " + fl.field;
+
+                        switch (fl.type) {
+                            case '==':
+                                return function eqFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) == pat);
+                                };
+                            case '!=':
+                                return function neqFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) != pat);
+                                };
+                            case '>':
+                                return function gtFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) > pat);
+                                };
+                            case '<':
+                                return function ltFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) < pat);
+                                };
+                            case '>=':
+                                return function getFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) >= pat);
+                                };
+                            case '<=':
+                                return function letFilter(call, cbf) {
+                                    cbf(parseFloat(call[fl.field]) <= pat);
+                                };
+                            default:
+                                return "Filter type " + fl.type + "declared as number comparer but no handler defined";
+                        }
+
+                        break;
+
+                    case 'first':
+                        // OPTZ Better handling
+                        return function firstFilter(call, cbf) {
+                            cbf(call == calls[0]);
+                        };
+
+                    case 'last':
+                        // OPTZ Better handling
+                        return function lastFilter(call, cbf) {
+                            cbf(call == calls[calls.length - 1]);
+                        };
+
+                    default:
+                        cb("Unknown filter type " + fl.type);
+                }
+            })();
+
+            if (typeof val == 'function') {
+                cbe(null, val);
+            } else {
+                cbe(val);
+            }
+
+        }, function executeFilters(err, filters) {
+            if (err) {
+                console.warn(err);
+                fil.data('calls', []);
+            } else {
+                async.filter(calls, function applyFilters(call, cbF) {
+                    async.every(filters, function applyOneFilter(filter, cbev) {
+                        if (typeof filter == 'function') {
+                            filter(call, function(res) {
+                                cbev(res);
+                            });
+                        }
+                    }, cbF);
+                }, onceFiltered);
+            }
+        });
+    }
+
+    function updateStat(el, cb) {
+        el = $(el);
+        var calls = parentData(el, true);
+        var stat = el.data('stat');
+        switch (stat) {
+            case 'table':
+                var thead = $('thead', el);
+                var fields = [];
+                $('th', thead).each(function(i, field) {
+                    fields.push($(field));
+                });
+                var tbody = $('tbody', el);
+                if (!tbody.length) tbody = $('<tbody>').appendTo(el);
+
+                function fillTbody(cbf) {
+                    tbody.empty();
+                    async.each(calls, function addTr(call, cbm) {
+                        var tr = $('<tr>').appendTo(tbody);
+                        async.each(fields, function addTd(field, cbe2) {
+                            var td = $('<td>');
+                            var fieldname = field.data('fieldname');
+                            formatEl(td, call[fieldname], fieldname);
+                            tr.append(td);
+                            cbe2();
+                        }, cbm);
+                    }, cbf);
+                }
+
+                if (el.is('.tablesorter')) {
+                    if (el.not('.tablesorter-stickyHeader')) {
+                        fillTbody(function updateTable() {
+                            el.trigger('update', [true, function(table) {
+                                cb();
+                            }]);
+                        });
+                    } else {
+                        cb();
+                    }
+                } else {
+                    fillTbody(function sortTable() {
+                        el.addClass('tablesorter');
+                        var columnSelector = $('<div>').insertBefore(el);
+                        pagerTop = $('<div>')
+                            .addClass('.pager')
+                            .append($('<button>').text('«').addClass('first'))
+                            .append($('<button>').text('<').addClass('prev'))
+                            .append($('<span>').text('Calls X - X of X (X total)').addClass('pagedisplay'))
+                            .append($('<button>').text('>').addClass('next'))
+                            .append($('<button>').text('»').addClass('last'))
+                            .append(
+                                $('<select>').addClass('pagesize')
+                                .append([10, 20, 30, 50, 100, 200, 500, 1000].map(function generateOption(nb) {
+                                    return $('<option>').val(nb).text(nb);
+                                }))
+                            )
+                            .insertBefore(el);
+                        pagerBot = pagerTop.clone().insertAfter(el);
+                        el
+                            .tablesorter({
+                                sortList: fields.map(function(field, i) {
+                                    var dat = field.data('sort');
+                                    if (dat !== undefined) {
+                                        return [i, dat];
+                                    } else {
+                                        return '';
+                                    }
+                                }),
+                                headers: fields.map(function(field) {
+                                    if (field.data('fieldname') == 'calldate') {
+                                        return {
+                                            sorter: 'date'
+                                        };
+                                    } else {
+                                        return '';
+                                    }
+                                }),
+                                widgets: ['zebra', 'filter', 'columnSelector'],
+                                widgetOptions: {
+                                    filter_formatter: fields.map(function(field) {
+                                        switch (field.data('searcher')) {
+                                            case 'select2':
+                                                return function($cell, indx) {
+                                                    return $.tablesorter.filterFormatter.select2($cell, indx, {});
+                                                };
+                                            default:
+                                                return '';
+                                        }
+                                    }),
+                                    columnSelector_container: columnSelector,
+                                    columnSelector_layout: '<label><input type="checkbox">{name}</label>',
+                                    columnSelector_name: 'data-selector-name',
+
+                                    columnSelector_mediaquery: true,
+                                    columnSelector_mediaqueryName: 'Auto',
+                                    columnSelector_mediaqueryState: true,
+                                    columnSelector_breakpoints: ['20em', '30em', '40em', '50em', '60em', '70em'],
+                                    // OPTZ Generate correct breakpoints so it never scrolls
+                                    columnSelector_priority: 'data-priority',
+                                },
+                            })
+                            .tablesorterPager({
+                                container: $.merge(pagerTop, pagerBot),
+                                removeRows: false,
+                                output: 'Calls {startRow} - {endRow} of {filteredRows} ({totalRows} total)',
+                            });
+                        cb();
+                    });
+                }
+                return;
+
+            case 'count':
+            case '#count':
+                el.text(calls ? calls.length : 0);
+                break;
+
+            default:
+                if (calls && calls.length) {
+                    var callsO = calls;
+                    calls = calls.transposeObjects(); // Inversing table
+                    var field = el.data('field'),
+                        x = calls[field];
+                    if (!x) {
+                        cb("No such field " + field);
+                    }
+                    var numbers = typeof x[0] == 'number'; // Are numbers
+
+                    var occurs = null; // Calculates number of occurences
+                    if (!numbers) {
+                        occurs = x.reduce(function(occ, cur) {
+                            if (isNaN(occ[cur])) {
+                                occ[cur] = 1;
+                            } else {
+                                occ[cur]++;
+                            }
+                            return occ;
+                        }, {});
+                    }
+
+                    if (numbers && stat == 'timeseries') { // OPTZ Group all chart handling
+                        // If XY chart with X as time
+
+                        // OPTZ Just update data if needed
+
+                        var timeseriesInterval = el.closest(':data(timeseriesInterval)').data('timeseriesInterval');
+
+                        function getTimeFormat(formatter) {
+                            if (!TIMESERIES_INTERVALS[formatter]) {
+                                console.error("Unknown time formatter" + formatter);
+                            } else {
+                                var string = '';
+                                for (var i = 0; i <= timeseriesInterval; i++) {
+                                    string += TIMESERIES_INTERVALS[formatter][i];
+                                }
+                                return string;
+                            }
+                        }
+
+                        var columns = [
+                            ['x'],
+                            [field]
+                        ];
+                        var dates = {};
+                        var minMom, maxMom; // Keep track of mini and maximum to fill the gaps
+                        callsO.map(function(val, i) {
+                            var mom = moment(val.calldate);
+                            if (!minMom) {
+                                minMom = maxMom = mom;
+                            } else {
+                                minMom = minMom < mom ? minMom : mom;
+                                maxMom = maxMom > mom ? maxMom : mom;
+                            }
+                            var date = mom.format(getTimeFormat('momentjs'));
+                            if (!dates[date]) {
+                                dates[date] = [];
+                            }
+                            dates[date].push(val[field]);
+                        });
+
+                        cut = TIMESERIES_INTERVALS.cut[timeseriesInterval];
+                        var points = Math.abs(maxMom.diff(minMom, cut));
+
+                        if (points > MAX_GRAPH_POINTS) {
+                            console.warn("Skipping graphic that would have " + points + "/" + MAX_GRAPH_POINTS + "points");
+                            el.empty().text("Too much data to display, please use at least " + Math.ceil(points / MAX_GRAPH_POINTS) + " times less data");
+                            cb(true); // TODO Better error handling
+                            return;
+                        }
+
+                        var mom = minMom.startOf(cut);
+                        maxMom = maxMom.endOf(cut);
+
+                        while (mom <= maxMom) {
+                            date = mom.format(getTimeFormat('momentjs'));
+                            columns[0].push(date);
+                            columns[1].push(dates[date] ? ss.sum(dates[date]) : 0);
+                            mom.add(1, cut);
+                        }
+
+                        var chart = c3.generate({
+                            data: {
+                                x: 'x',
+                                xFormat: getTimeFormat('c3js'),
+                                columns: columns
+                            },
+                            axis: {
+                                x: {
+                                    type: 'timeseries',
+                                    tick: {
+                                        format: getTimeFormat('c3js'),
+                                    }
+                                }
+                            },
+                            zoom: {
+                                enabled: true
+                            },
+                        });
+                        el.empty().append(chart.element);
+                    } else if (numbers && SS_X_FUN.indexOf(stat) != -1) {
+                        // If numbering stat, use simple-statistics
+                        el.text(ss[stat](x));
+                    } else if (!numbers && C3_N_FUN.indexOf(stat) != -1) {
+                        // If it's a N-chart
+                        var columns = Object.keys(occurs).reduce(function assoc(memo, key) {
+                                memo.push([key, occurs[key]]);
+                                return memo;
+                            }, []),
+                            oldChart = el.data('chart');
+
+                        if (oldChart) {
+                            var columnsToUnload = Object.keys(oldChart.x())
+                                .diff(columns.reduce(function(memo, key) {
+                                    memo.push(key[0]);
+                                    return memo;
+                                }, []));
+                            async.series([
+                                function(cba) {
+                                    oldChart.load({
+                                        columns: columns,
+                                        // unload: columnsToUnload, // Too quick for C3 to handle
+                                        done: cba,
+                                    });
+                                },
+                                function(cba) {
+                                    oldChart.unload({
+                                        ids: columnsToUnload,
+                                        done: cba,
+                                    });
+                                }
+                            ]);
+                        } else {
+                            var chartSpecs = {
+                                data: {
+                                    columns: columns,
+                                    type: stat,
+                                },
+                                legend: {
+                                    position: 'right'
+                                },
+                            };
+                            if (['pie', 'donut'].indexOf(stat) != -1) {
+                                chartSpecs[stat] = {
+                                    label: {
+                                        format: function(value) {
+                                            return value;
+                                        }
+                                    }
+                                };
+                            }
+                            var chart = c3.generate(chartSpecs);
+                            el.empty().append(chart.element).data('chart', chart);
+                        }
+                    } else {
+                        // Other type of stats
+                        var statType = (numbers ? '#' : '') + stat;
+                        switch (statType) {
+                            case 'undefined':
+                            case '#undefined':
+                            case 'first':
+                            case '#first':
+                                formatEl(el, x[0], field);
+                                break;
+
+                            case 'last':
+                            case '#last':
+                                formatEl(el, x[x.length - 1], field);
+                                break;
+
+                            default:
+                                cb("Unknown stat type " + statType);
+                                return;
+                        }
+                    }
+                } else {
+                    el.removeData();
+                    el.text("No data");
+                }
+                break;
+        }
+        cb();
+    }
+
+    function changed(el, cb) {
+        async.each($(':data(filters)', el).addBack(':data(filters)'), function updateFilters(el, cbe) {
+            updateFilter(el, cbe);
+        }, function() {
+            async.each($('[data-stat],[data-field]'), function updateStats(el, cbe) {
+                updateStat(el, cbe);
+            }, function() {
+                humanizeTime(el, cb);
+            });
+        });
+    }
+
+
     async.parallel([
         queryDB,
         function() {
@@ -890,6 +897,17 @@ $(function() {
             });
         });
     });
+
+    function humanizeTime(el, cb) {
+        $('time', el).each(function() {
+            var t = $(this);
+            var m = moment(t.attr('datetime'));
+            var d = moment.duration(m.diff(moment()));
+            t.text(d > -moment.duration(12, 'hour') ? d.humanize(true) : m.toDate().toLocaleString());
+        });
+        if (cb) cb();
+    }
+    setInterval(humanizeTime, 60000);
 
     $('.placeholder').css('display', 'none');
     // $('.placeholder').css('color', 'gray');
