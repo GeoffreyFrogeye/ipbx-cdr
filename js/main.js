@@ -1,4 +1,5 @@
 $ = jQuery = require('jquery');
+window.$ = $;
 var ss = require('simple-statistics');
 var EventEmitter = require('events').EventEmitter;
 var async = require('async');
@@ -8,15 +9,14 @@ var moment = require('moment');
 
 // CDR OBJECT
 function CDR() {
-    this.allData = []; // All data collected
-    this.data = []; // Data filtered in use
+    this.data = [];
     // TODO Time selection
 }
 
 CDR.prototype = {
     // Data management
     update: function(cb) {
-        if (this.allData.length) {
+        if (this.data.length) {
             // OPTZ Fetch only new data
         } else {
             this.updateAll(cb);
@@ -26,7 +26,7 @@ CDR.prototype = {
         var that = this;
         $.get('ajax/cdr_all')
             .done(function(text) {
-                that.allData = JSON.parse(text);
+                that.data = JSON.parse(text);
                 that.filterData(cb);
             })
             .fail(function(data) {
@@ -34,7 +34,12 @@ CDR.prototype = {
             });
     },
     filterData: function(cb) {
-        this.data = this.allData; // PLACEHOLDER
+        this.data = this.data.map(function addCustomFields(call) {
+            for (var customFieldI in CUSTOM_FIELDS) {
+                call[customFieldI] = CUSTOM_FIELDS[customFieldI](call);
+            }
+            return call;
+        });
         this.emit('freshData', this.data);
         if (cb) cb(null, this.data);
     },
@@ -219,6 +224,7 @@ var FORMATTERS = {
     },
     duration: durationFormat,
     billsec: durationFormat,
+    picktime: durationFormat,
     disposition: function dispositionFormat(input) {
         return {
             text: input.replace(/\w\S*/g, function(txt) {
@@ -229,6 +235,12 @@ var FORMATTERS = {
     channel: codeFormat,
     dstchannel: codeFormat,
     lastdata: codeFormat,
+};
+
+var CUSTOM_FIELDS = {
+    picktime: function(call) {
+        return call.duration - call.billsec;
+    }
 };
 
 function formatEl(el, content, field) {
@@ -482,7 +494,7 @@ function updateStat(el, cb) {
                             widgets: ['zebra', 'filter', 'columnSelector'],
                             widgetOptions: {
                                 filter_formatter: fields.map(function(field) {
-                                    switch (field.data('filter')) {
+                                    switch (field.data('searcher')) {
                                         case 'select2':
                                             return function($cell, indx) {
                                                 return $.tablesorter.filterFormatter.select2($cell, indx, {});

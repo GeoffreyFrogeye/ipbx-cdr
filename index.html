@@ -30,8 +30,9 @@
             <input type="time" class="A" /> to
             <input type="date" class="B" /> at
             <input type="time" class="B" /> (
-            <input type="checkbox" name="bNow" checked/> now)<br/>
-            Group graph times <select name="timeseriesInterval"></select>
+            <input type="checkbox" name="bNow" checked/> now)
+            <br/> Group graph times
+            <select name="timeseriesInterval"></select>
         </p>
         <div>
             <h2>Call list</h2>
@@ -43,10 +44,11 @@
                     <th data-priority="critical" data-fieldname="dst">Destination</th>
                     <th data-priority="critical" data-fieldname="duration">Duration</th>
                     <th data-priority="3" data-fieldname="billsec">Billed</th>
-                    <th data-priority="3" data-fieldname="disposition" data-filter="select2">Disposition</th>
-                    <th data-priority="2" data-fieldname="lastapp" data-filter="select2">Last Application</th>
+                    <th data-priority="3" data-fieldname="picktime">Pick up time</th>
+                    <th data-priority="3" data-fieldname="disposition" data-searcher="select2">Disposition</th>
+                    <th data-priority="2" data-fieldname="lastapp" data-searcher="select2">Last Application</th>
                     <th data-priority="3" data-fieldname="lastdata">Last data</th>
-                    <th data-priority="4" data-fieldname="dcontext" data-filter="select2">Context</th>
+                    <th data-priority="4" data-fieldname="dcontext" data-searcher="select2">Context</th>
                     <th data-priority="4" data-fieldname="sequence">Sequence</th>
                     <th data-priority="4" data-fieldname="uniqueid">Unique ID</th>
                     <th data-priority="4" data-fieldname="linkedid">Linked ID</th>
@@ -56,9 +58,10 @@
                     <th data-priority="6" data-fieldname="accountcode">Account Code</th>
                     <th data-priority="6" data-fieldname="userfield">Userfield</th>
                     <th data-priority="6" data-fieldname="peeraccount">Peer account</th>
+                </thead>
+                <tbody>
+                </tbody>
             </table>
-            <tbody>
-            </tbody>
         </div>
         <h2>Overview</h2>
         <div class="overview">
@@ -76,13 +79,16 @@
                 <h4>All</h4>
                 <ul class="all">
                     <li>Total:
-                        <span data-field="calldate" data-stat="count">N</span>
+                        <span data-stat="count">N</span>
                     </li>
                     <li>Answered:
-                        <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
                     </li>
                     <li>Missed:
-                        <span data-field="calldate" data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                    <li>Mean pick up time:
+                        <span data-field="picktime" data-stat="mean">00:00:00</span>
                     </li>
                 </ul>
                 <h4 class="placeholder">Inside</h4>
