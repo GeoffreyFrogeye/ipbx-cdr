@@ -5,5 +5,5 @@ Statistics for Asterisk
 ```bash
 composer install
 bower install
+npm install
 ```
-Remove `'use strict'` from `bower_components/simple-statistics/src/simple_statistics.js`

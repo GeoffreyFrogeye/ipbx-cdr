@@ -1,3 +1,11 @@
+$ = jQuery = require('jquery');
+var ss = require('simple-statistics');
+var EventEmitter = require('events').EventEmitter;
+var async = require('async');
+var c3 = require('c3');
+var moment = require('moment');
+// var select2 = require('select2'); // TODO
+
 // CDR OBJECT
 function CDR() {
     this.allData = []; // All data collected
