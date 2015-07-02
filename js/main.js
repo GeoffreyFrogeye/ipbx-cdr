@@ -67,39 +67,27 @@ Array.prototype.diff = function(a) {
 }; // From http://stackoverflow.com/a/4026828
 
 (function() {
-
     var matcher = /\s*(?:((?:(?:\\\.|[^.,])+\.?)+)\s*([!~><=]=|[><])\s*("|')?((?:\\\3|.)*?)\3|(.+?))\s*(?:,|$)/g;
 
     function resolve(element, data) {
-
         data = data.match(/(?:\\\.|[^.])+(?=\.|$)/g);
-
         var cur = jQuery.data(element)[data.shift()];
-
         while (cur && data[0]) {
             cur = cur[data.shift()];
         }
-
         return cur || undefined;
-
     }
-
     jQuery.expr[':'].data = function(el, i, match) {
-
         matcher.lastIndex = 0;
-
         var expr = match[3],
             m,
             check, val,
             allMatch = null,
             foundMatch = false;
-
         m = matcher.exec(expr);
         while (m) {
-
             check = m[4];
             val = resolve(el, m[1] || m[5]);
-
             switch (m[2]) {
                 case '==':
                     foundMatch = val == check;
@@ -125,14 +113,10 @@ Array.prototype.diff = function(a) {
                 default:
                     if (m[5]) foundMatch = !!val;
             }
-
             allMatch = allMatch === null ? foundMatch : allMatch && foundMatch;
-
             m = matcher.exec(expr);
         }
-
         return allMatch;
-
     };
 
 }()); // From http://stackoverflow.com/a/2895933
@@ -208,6 +192,14 @@ function durationFormat(input) {
     };
 }
 
+function capsFormat(input) {
+    return {
+        text: input.replace(/\w\S*/g, function(txt) {
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        })
+    };
+} // From http://stackoverflow.com/a/4878800
+
 var FORMATTERS = {
     clid: function clidFormat(input) {
         return {
@@ -225,13 +217,8 @@ var FORMATTERS = {
     duration: durationFormat,
     billsec: durationFormat,
     picktime: durationFormat,
-    disposition: function dispositionFormat(input) {
-        return {
-            text: input.replace(/\w\S*/g, function(txt) {
-                return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-            }), // From http://stackoverflow.com/a/4878800
-        };
-    },
+    disposition: capsFormat,
+    domain: capsFormat,
     channel: codeFormat,
     dstchannel: codeFormat,
     lastdata: codeFormat,
@@ -240,6 +227,20 @@ var FORMATTERS = {
 var CUSTOM_FIELDS = {
     picktime: function(call) {
         return call.duration - call.billsec;
+    },
+    domain: function(call) {
+        function internNumber(number) {
+            return number.length <= 5;
+        }
+        internSrc = internNumber(call.src);
+        internDst = internNumber(call.dst);
+        if (internSrc && internDst) {
+            return 'intern';
+        } else if (internSrc) {
+            return 'outgoing';
+        } else if (internDst) {
+            return 'incoming';
+        }
     }
 };
 
