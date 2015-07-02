@@ -6,4 +6,5 @@ Statistics for Asterisk
 composer install
 bower install
 npm install
+gulp bootstrap
 ```

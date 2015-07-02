@@ -7,58 +7,48 @@ var gutil = require('gulp-util');
 var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var reactify = require('reactify');
+var sass = require('gulp-sass');
+// TODO gulp-install
 
 gulp.task('bower', function() {
     return bower()
         .pipe(gulp.dest('lib/'));
 });
 
-gulp.task('javascriptDev', function() {
+gulp.task('script', function() {
     // set up the browserify instance on a task basis
     var b = browserify({
         entries: 'js/main.js',
-        debug: true,
-        // defining transforms here will avoid crashing your stream
-        // transform: [reactify]
+        debug: !gulp.env.dev,
     }).transform('debowerify');
 
-    return b.bundle()
+    var r = b.bundle()
         .pipe(source('out.js'))
         .pipe(buffer())
         .pipe(sourcemaps.init({
             loadMaps: true
         }))
-        // Add transformation tasks to the pipeline here.
-        // .pipe(uglify())
-        .on('error', gutil.log)
-        .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('dist/'));
+        .on('error', gutil.log);
+    if (!gulp.env.dev) r = r.pipe(uglify()).pipe(sourcemaps.write('./'));
+    return r.pipe(gulp.dest('dist/'));
 });
 
-gulp.task('javascript', function() {
-    // set up the browserify instance on a task basis
-    var b = browserify({
-        entries: 'js/main.js',
-        debug: true,
-        // defining transforms here will avoid crashing your stream
-        transform: [reactify]
-    }).transform('debowerify');
-
-    return b.bundle()
-        .pipe(source('out.js'))
-        .pipe(buffer())
-        .pipe(sourcemaps.init({
-            loadMaps: true
-        }))
-        // Add transformation tasks to the pipeline here.
-        .pipe(uglify())
-        .on('error', gutil.log)
-        .pipe(sourcemaps.write('./'))
-        .pipe(gulp.dest('dist/'));
+gulp.task('script:watch', function() {
+    gulp.watch('./js/main.js', ['script']);
 });
 
-gulp.task('bootstrap', ['bower', 'javascript']);
+gulp.task('style', function() {
+    gulp.src('./css/style.scss')
+        .pipe(sass().on('error', sass.logError))
+        .pipe(gulp.dest('./dist'));
+});
 
-gulp.task('dev', ['javascriptDev']);
+gulp.task('style:watch', function() {
+    gulp.watch('./css/style.scss', ['style']);
+});
 
-gulp.task('default', ['bootstrap']);
+gulp.task('bootstrap', ['bower', 'script', 'style']);
+
+gulp.task('continous', ['bootstrap', 'script:watch', 'style:watch']);
+
+gulp.task('default', ['continous']);

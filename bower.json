@@ -16,10 +16,12 @@
     "tests"
   ],
   "dependencies": {
-    "c3": "~0.4.10",
-    "jquery.tablesorter": "~2.22.1"
+    "jquery.tablesorter": "~2.22.1",
+    "select2": "3.5.2"
   },
   "devDependencies": {
-    "jquery": "~2.1.4"
+    "c3": "~0.4.10",
+    "jquery": "~2.1.4",
+    "bootstrap-sass": "~3.3.5"
   }
 }
