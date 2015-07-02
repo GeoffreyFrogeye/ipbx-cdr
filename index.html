@@ -6,6 +6,7 @@
     <title>IPBX CDR</title>
     <script type="text/javascript" src="dist/out.js"></script>
     <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css" />
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" />
     <!-- Table sorter -->
     <link href="bower_components/jquery.tablesorter/css/theme.default.css" rel="stylesheet" type="text/css" />
     <script type="text/javascript" src="bower_components/jquery.tablesorter/js/jquery.tablesorter.js"></script>
@@ -76,66 +77,76 @@
                     <span data-field="billsec">000</span> billed) with last application being
                     <span data-field="lastapp">lastapp</span>.
                 </p>
-                <h4>All</h4>
-                <ul>
-                    <li>Total:
-                        <span data-stat="count">N</span>
-                    </li>
-                    <li>Answered:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
-                    </li>
-                    <li>Missed:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
-                    </li>
-                    <li>Mean pick up time:
-                        <span data-field="picktime" data-stat="mean">00:00:00</span>
-                    </li>
-                </ul>
-                <h4>Intern</h4>
-                <ul data-filter-field="domain" data-filter-pattern="intern">
-                    <li>Total:
-                        <span data-stat="count">N</span>
-                    </li>
-                    <li>Answered:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
-                    </li>
-                    <li>Missed:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
-                    </li>
-                    <li>Mean pick up time:
-                        <span data-field="picktime" data-stat="mean">00:00:00</span>
-                    </li>
-                </ul>
-                <h4>From outside</h4>
-                <ul data-filter-field="domain" data-filter-pattern="incoming">
-                    <li>Total:
-                        <span data-stat="count">N</span>
-                    </li>
-                    <li>Answered:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
-                    </li>
-                    <li>Missed:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
-                    </li>
-                    <li>Mean pick up time:
-                        <span data-field="picktime" data-stat="mean">00:00:00</span>
-                    </li>
-                </ul>
-                <h4>To outside</h4>
-                <ul data-filter-field="domain" data-filter-pattern="outgoing">
-                    <li>Total:
-                        <span data-stat="count">N</span>
-                    </li>
-                    <li>Answered:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
-                    </li>
-                    <li>Missed:
-                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
-                    </li>
-                    <li>Mean pick up time:
-                        <span data-field="picktime" data-stat="mean">00:00:00</span>
-                    </li>
-                </ul>
+                <div class="row">
+                    <div class="col-xs-3">
+                        <h4>All</h4>
+                        <ul>
+                            <li>Total:
+                                <span data-stat="count">N</span>
+                            </li>
+                            <li>Answered:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                            </li>
+                            <li>Missed:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                            </li>
+                            <li>Mean pick up time:
+                                <span data-field="picktime" data-stat="mean">00:00:00</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-xs-3">
+                        <h4>Intern</h4>
+                        <ul data-filter-field="domain" data-filter-pattern="intern">
+                            <li>Total:
+                                <span data-stat="count">N</span>
+                            </li>
+                            <li>Answered:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                            </li>
+                            <li>Missed:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                            </li>
+                            <li>Mean pick up time:
+                                <span data-field="picktime" data-stat="mean">00:00:00</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-xs-3">
+                        <h4>From outside</h4>
+                        <ul data-filter-field="domain" data-filter-pattern="incoming">
+                            <li>Total:
+                                <span data-stat="count">N</span>
+                            </li>
+                            <li>Answered:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                            </li>
+                            <li>Missed:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                            </li>
+                            <li>Mean pick up time:
+                                <span data-field="picktime" data-stat="mean">00:00:00</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-xs-3">
+                        <h4>To outside</h4>
+                        <ul data-filter-field="domain" data-filter-pattern="outgoing">
+                            <li>Total:
+                                <span data-stat="count">N</span>
+                            </li>
+                            <li>Answered:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                            </li>
+                            <li>Missed:
+                                <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                            </li>
+                            <li>Mean pick up time:
+                                <span data-field="picktime" data-stat="mean">00:00:00</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="caller">
@@ -143,35 +154,45 @@
                 <input type="text" name="name" />
             </h2>
             <h3>As a caller</h3>
-            <h4>Duration</h4>
-            <p>Last:
-                <span data-field="duration" data-stat="last"></span>
-            </p>
-            <p>Mean:
-                <span data-field="duration" data-stat="mean"></span>
-            </p>
-            <p>Sum:
-                <span data-field="duration" data-stat="sum"></span>
-            </p>
-            <h4>Billing</h4>
-            <p>Last:
-                <span data-field="billsec" data-stat="last"></span>
-            </p>
-            <p>Mean:
-                <span data-field="billsec" data-stat="mean"></span>
-            </p>
-            <p>Sum:
-                <span data-field="billsec" data-stat="sum"></span>
-            </p>
+            <div class="row">
+                <div class="col-xs-6">
+                    <h4>Duration</h4>
+                    <p>Last:
+                        <span data-field="duration" data-stat="last"></span>
+                    </p>
+                    <p>Mean:
+                        <span data-field="duration" data-stat="mean"></span>
+                    </p>
+                    <p>Sum:
+                        <span data-field="duration" data-stat="sum"></span>
+                    </p>
+                </div>
+                <div class="col-xs-6">
+                    <h4>Billing</h4>
+                    <p>Last:
+                        <span data-field="billsec" data-stat="last"></span>
+                    </p>
+                    <p>Mean:
+                        <span data-field="billsec" data-stat="mean"></span>
+                    </p>
+                    <p>Sum:
+                        <span data-field="billsec" data-stat="sum"></span>
+                    </p>
+                </div>
+            </div>
 
             <h4>Calls</h4>
             <div data-field="duration" data-stat="timeseries"></div>
-
-            <h4>Destinations</h4>
-            <div data-field="dst" data-stat="pie"></div>
-
-            <h4>Last application</h4>
-            <div data-field="lastapp" data-stat="donut"></div>
+            <div class="row">
+                <div class="col-xs-6">
+                    <h4>Destinations</h4>
+                    <div data-field="dst" data-stat="pie"></div>
+                </div>
+                <div class="col-xs-6">
+                    <h4>Last application</h4>
+                    <div data-field="lastapp" data-stat="donut"></div>
+                </div>
+            </div>
         </div>
     </div>
 </body>
