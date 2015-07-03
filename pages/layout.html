@@ -17,27 +17,37 @@
     <script type="text/javascript" src="lib/select2/select2.js"></script>
 </head>
 
-<body class="dateFilter">
+<body>
     <nav>
-        <h1>IPBX CDR</h1>
+        <h1><a href="home">IPBX CDR</a></h1>
         <ul>
             <li><a href="overview">Overview</a></li>
             <li><a href="list">List</a></li>
             <li><a href="src">Emitted</a></li>
+            <li><a href="dst">Received</a></li>
         </ul>
         <hr/>
-        <p class="filterInput">
-            From<br/>
-            <input type="date" class="A" />
-            <input type="time" class="A" /><br/>
-            To (<input type="checkbox" name="bNow" checked/> now)<br/>
-            <input type="date" class="B" />
-            <input type="time" class="B" /><br/>
-        </p>
-        <p class="filterInput">
-            Group graph times
-            <select name="timeseriesInterval"></select>
-        </p>
+        <div class="globalFilters">
+            <h3>Filters</h3>
+            <p class="filterInput">
+                From<br/>
+                <input type="date" class="A" />
+                <input type="time" class="A" /><br/>
+                To (<input type="checkbox" name="bNow" checked/> now)<br/>
+                <input type="date" class="B" />
+                <input type="time" class="B" /><br/>
+            </p>
+            <hr/>
+            <p class="filterInput">
+                Number(s) :
+                <input type="text" name="caller"/>
+            </p>
+            <hr/>
+            <p class="filterInput">
+                Group graph times
+                <select name="timeseriesInterval"></select>
+            </p>
+        </div>
     </nav>
     <div role="main">
         {{content}}

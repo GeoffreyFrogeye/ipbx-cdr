@@ -2,7 +2,6 @@ body {
     background: hsl(random(256)-1, 90, 90);
 }
 @import "../bower_components/c3/c3.css";
-@import "../bower_components/select2/select2.css";
 @import "../bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
 
 // Sidebar inspired by http://startbootstrap.com/template-overviews/simple-sidebar/
@@ -21,9 +20,10 @@ body {
         overflow-y: auto;
         background: lighten($brand-primary, 46.7%);
         transition: all 0.5s ease;
+        padding-left: 10px;
 
         >h1 {
-            margin-left: 15px;
+            margin-left: 5px;
         }
 
         >ul {
@@ -37,7 +37,7 @@ body {
                     width: 100%;
                     height: 75px;
                     padding-top: 20px;
-                    padding-left: 30px;
+                    padding-left: 20px;
                     font-size: 24px;
                     cursor: pointer;
                 }
@@ -113,9 +113,26 @@ table {
     input {
         @extend .form-control;
     }
+    tr.filtered {
+        display: none;
+    }
+
     .tablesorter-filter-row td {
         padding: 3px;
     }
+
+    .tablesorter-header div::before {
+        content: '◆ '
+    }
+
+    .tablesorter-headerAsc div::before {
+        content: '▲';
+    }
+
+    .tablesorter-headerDesc div::before {
+        content: '▼';
+    }
+
 }
 .tablesorter-pager {
     @extend .ix-inline-form;

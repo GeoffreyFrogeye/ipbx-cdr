@@ -1,10 +1,11 @@
 $ = jQuery = require('jquery');
+require('bootstrap-sass');
 ss = require('simple-statistics');
 EventEmitter = require('events').EventEmitter;
 async = require('async');
 c3 = require('c3');
 moment = require('moment');
-// var select2 = require('select2'); // TODO
+require("moment-duration-format");
 
 // CDR OBJECT
 function CDR() {
@@ -184,10 +185,10 @@ function codeFormat(input) {
 }
 
 function durationFormat(input) {
-    var i = parseInt(input),
-        d = (new Date(i * 1000));
     return {
-        text: ("0" + (d.getUTCHours())).slice(-2) + ':' + ("0" + (d.getUTCMinutes())).slice(-2) + ':' + ("0" + (d.getUTCSeconds())).slice(-2)
+        text: typeof input == 'number' ? moment.duration(input, 'second').format('HH:mm:ss', {
+            trim: false
+        }) : null
     };
 }
 
@@ -225,7 +226,7 @@ var FORMATTERS = {
 
 var CUSTOM_FIELDS = {
     picktime: function(call) {
-        return call.duration - call.billsec;
+        return call.lastapp == 'Dial' ? call.duration - call.billsec : null;
     },
     domain: function(call) {
         function internNumber(number) {
@@ -253,15 +254,20 @@ var cdr = null;
 
 
 $(function() {
+    var mainFilter = '[role=main]';
+    var main = $(mainFilter);
+
     // Navigation
-    $(document).pjax('nav a', '[role=main]');
+    $(document).pjax('nav a', mainFilter);
 
     $(document).on('pjax:start', function startNav() {
         addOverlay();
     });
 
     $(document).on('pjax:success', function updateContainer() {
-        changed('[role=main]');
+        updateCallerFilters();
+        extractFilters(main);
+        changed(main);
         remOverlay();
     });
 
@@ -485,7 +491,21 @@ $(function() {
                 } else {
                     fillTbody(function sortTable() {
                         el.addClass('tablesorter');
-                        var columnSelector = $('<div>').insertBefore(el);
+                        var columnSelectorTarget = $('<div>');
+                        var columnSelectorButton = $('<button>')
+                            .attr('type', 'button')
+                            .text('Select Columns')
+                            .popover({
+                                placement: 'right',
+                                html: true,
+                                content: columnSelectorTarget
+                            })
+                            .insertBefore(el);
+                        $('<div>')
+                            .addClass('hidden')
+                            .append(columnSelectorTarget)
+                            .insertBefore(el);
+
                         pagerTop = $('<div>')
                             .append($('<button>').text('«').addClass('first'))
                             .append($('<button>').text('<').addClass('prev'))
@@ -521,26 +541,10 @@ $(function() {
                                 }),
                                 widgets: ['filter', 'columnSelector'],
                                 widgetOptions: {
-                                    filter_formatter: fields.map(function(field) {
-                                        switch (field.data('searcher')) {
-                                            case 'select2':
-                                                return function($cell, indx) {
-                                                    return $.tablesorter.filterFormatter.select2($cell, indx, {});
-                                                };
-                                            default:
-                                                return '';
-                                        }
-                                    }),
-                                    columnSelector_container: columnSelector,
-                                    columnSelector_layout: '<label><input type="checkbox">{name}</label>',
+                                    columnSelector_container: columnSelectorTarget,
+                                    columnSelector_layout: '<label><input type="checkbox">{name}</label><br/>',
                                     columnSelector_name: 'data-selector-name',
-
-                                    columnSelector_mediaquery: true,
-                                    columnSelector_mediaqueryName: 'Auto',
-                                    columnSelector_mediaqueryState: true,
-                                    columnSelector_breakpoints: ['20em', '30em', '40em', '50em', '60em', '70em'],
-                                    // OPTZ Generate correct breakpoints so it never scrolls
-                                    columnSelector_priority: 'data-priority',
+                                    columnSelector_mediaquery: false,
                                 },
                             })
                             .tablesorterPager({
@@ -771,8 +775,46 @@ $(function() {
         }
     ]);
 
-    $('.dateFilter').each(function() {
-        var filter = $(this);
+    function extractFilters(el) {
+        $('[data-filter],[data-filter-field]', el).each(function extractFiltersFromDOM() {
+            var t = $(this);
+            var f = t.data('filters');
+            if (!f) f = [];
+            var type = t.data('filter');
+            var flags = t.data('filter-flags');
+            f.push({
+                type: type ? type : (flags !== undefined ? 'regexp' : 'is'),
+                field: t.data('filter-field'),
+                pattern: t.data('filter-pattern'),
+                flags: flags,
+            });
+            t.data('filters', f);
+        });
+    }
+    extractFilters(main);
+
+    var num;
+
+    function updateCallerFilters() {
+        var srcFilter = $('.srcFilter');
+        var dstFilter = $('.dstFilter');
+        srcFilter.data('filters', [{
+            type: 'is',
+            field: 'src',
+            pattern: num,
+        }]);
+        dstFilter.data('filters', [{
+            type: 'is',
+            field: 'dst',
+            pattern: num,
+        }]);
+        changed(main);
+    }
+
+    $('.globalFilters').each(function() {
+        var control = $(this);
+
+        // Date filter
         var A = [$('input[type=date].A'), $('input[type=time].A')];
         var B = [$('input[type=date].B'), $('input[type=time].B')];
         var bNowI = $('input[type=checkbox][name=bNow]');
@@ -813,8 +855,8 @@ $(function() {
                     el.css('color', 'red');
                 });
             }
-            filter.data('filters', filters);
-            changed(filter);
+            main.data('filters', filters);
+            changed(main);
         }
 
         function setDate(els, date) {
@@ -852,8 +894,9 @@ $(function() {
             setDate(A, new Date(calls[0].calldate));
         });
 
+        // Timeserie option
         var TIMESERIES_DEFAULT_INTERVAL = 2;
-        $('select[name=timeseriesInterval]', filter).each(function initTimeSeriesValues() {
+        $('select[name=timeseriesInterval]', control).each(function initTimeSeriesValues() {
             select = $(this);
             TIMESERIES_INTERVALS.names.map(function addOption(name, i) {
                 var op = $('<option>').val(i).text(name);
@@ -862,7 +905,7 @@ $(function() {
             });
 
             function changeTimeSeriesValue(value) {
-                filter.data('timeseriesInterval', value);
+                main.data('timeseriesInterval', value);
                 changed($('[data-stat=timeseries]'));
             }
 
@@ -873,48 +916,28 @@ $(function() {
             changeTimeSeriesValue(TIMESERIES_DEFAULT_INTERVAL);
         });
 
-    });
+        // Number filter
 
-    $('[data-filter],[data-filter-field]').each(function extractFiltersFromDOM() {
-        var t = $(this);
-        var f = t.data('filters');
-        if (!f) f = [];
-        var type = t.data('filter');
-        var flags = t.data('filter-flags');
-        f.push({
-            type: type ? type : (flags !== undefined ? 'regexp' : 'is'),
-            field: t.data('filter-field'),
-            pattern: t.data('filter-pattern'),
-            flags: flags,
-        });
-        t.data('filters', f);
-    });
-
-    $('.caller').each(function() {
-        var caller = $(this);
-        $('input[name=name]', caller).bind('change keyup paste', function() {
-            var input = $(this),
-                num = input.val();
+        $('input[name=caller]', control).bind('change keyup paste', function() {
+            var input = $(this);
+            num = input.val();
             cdr.callerExists(num, function(exists) {
                 if (num) {
                     if (exists) {
-                        caller.data('filters', [{
-                            type: 'is',
-                            field: 'src',
-                            pattern: num,
-                        }]);
-                        changed(caller);
+                        updateCallerFilters(num);
+                        $(document).on('pjax:')
                         input.css('color', '');
                     } else {
                         input.css('color', 'red');
                     }
                 } else {
-                    caller.data('filters', []);
-                    changed(caller);
+                    main.data('filters', []);
+                    changed(main);
                     input.css('color', '');
                 }
             });
         });
+
     });
 
     function humanizeTime(el, cb) {

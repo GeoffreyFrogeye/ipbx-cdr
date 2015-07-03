@@ -19,7 +19,7 @@ gulp.task('script', function() {
     // set up the browserify instance on a task basis
     var b = browserify({
         entries: 'js/main.js',
-        debug: !gulp.env.dev,
+        debug: true,
     }).transform('debowerify');
 
     var r = b.bundle()
@@ -29,8 +29,10 @@ gulp.task('script', function() {
             loadMaps: true
         }))
         .on('error', gutil.log);
-    if (!gulp.env.dev) r = r.pipe(uglify()).pipe(sourcemaps.write('./'));
-    return r.pipe(gulp.dest('dist/'));
+    if (!gulp.env.dev) r = r.pipe(uglify());
+    return r
+        .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('dist/'));
 });
 
 gulp.task('script:watch', function() {
