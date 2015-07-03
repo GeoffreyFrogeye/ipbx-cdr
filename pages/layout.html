@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <title>IPBX CDR</title>
+    <script type="text/javascript" src="dist/out.js"></script>
+    <link href="dist/style.css" rel="stylesheet" />
+    <script type="text/javascript" src="lib/jquery-pjax/jquery.pjax.js"></script>
+    <!-- Table sorter -->
+    <script type="text/javascript" src="lib/jquery.tablesorter/js/jquery.tablesorter.js"></script>
+    <script type="text/javascript" src="lib/jquery.tablesorter/js/jquery.tablesorter.widgets.js"></script>
+    <script type="text/javascript" src="lib/jquery.tablesorter/js/widgets/widget-columnSelector.js"></script>
+    <script type="text/javascript" src="lib/jquery.tablesorter/js/widgets/widget-pager.js"></script>
+    <script type="text/javascript" src="lib/jquery.tablesorter/dist/js/extras/jquery.tablesorter.pager.min.js"></script>
+    <script type="text/javascript" src="lib/jquery.tablesorter/js/widgets/widget-filter-formatter-select2.js"></script>
+    <script type="text/javascript" src="lib/select2/select2.js"></script>
+</head>
+
+<body class="dateFilter">
+    <nav>
+        <h1>IPBX CDR</h1>
+        <ul>
+            <li><a href="overview">Overview</a></li>
+            <li><a href="list">List</a></li>
+            <li><a href="src">Emitted</a></li>
+        </ul>
+        <hr/>
+        <p class="filterInput">
+            From<br/>
+            <input type="date" class="A" />
+            <input type="time" class="A" /><br/>
+            To (<input type="checkbox" name="bNow" checked/> now)<br/>
+            <input type="date" class="B" />
+            <input type="time" class="B" /><br/>
+        </p>
+        <p class="filterInput">
+            Group graph times
+            <select name="timeseriesInterval"></select>
+        </p>
+    </nav>
+    <div role="main">
+        {{content}}
+    </div>
+</body>
+
+</html>

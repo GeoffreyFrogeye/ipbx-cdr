@@ -1,0 +1,85 @@
+<h2>Overview</h2>
+<div class="overview">
+    <h3>Calls</h3>
+    <div class="calls">
+        <p data-filter="last">Last call at
+            <span data-field="calldate">YYYY-MM-DD hh:mm:ss</span> from
+            <span data-field="src">src</span> to
+            <span data-field="dst">dst</span> in context
+            <span data-field="dcontext">dcontext</span>, lasted
+            <span data-field="duration">000</span> seconds (
+            <span data-field="billsec">000</span> billed) with last application being
+            <span data-field="lastapp">lastapp</span>.
+        </p>
+        <div class="row">
+            <div class="col-xs-3">
+                <h4>All</h4>
+                <ul>
+                    <li>Total:
+                        <span data-stat="count">N</span>
+                    </li>
+                    <li>Answered:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                    </li>
+                    <li>Missed:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                    <li>Mean pick up time:
+                        <span data-field="picktime" data-stat="mean">00:00:00</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-xs-3">
+                <h4>Intern</h4>
+                <ul data-filter-field="domain" data-filter-pattern="intern">
+                    <li>Total:
+                        <span data-stat="count">N</span>
+                    </li>
+                    <li>Answered:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                    </li>
+                    <li>Missed:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                    <li>Mean pick up time:
+                        <span data-field="picktime" data-stat="mean">00:00:00</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-xs-3">
+                <h4>From outside</h4>
+                <ul data-filter-field="domain" data-filter-pattern="incoming">
+                    <li>Total:
+                        <span data-stat="count">N</span>
+                    </li>
+                    <li>Answered:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                    </li>
+                    <li>Missed:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                    <li>Mean pick up time:
+                        <span data-field="picktime" data-stat="mean">00:00:00</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-xs-3">
+                <h4>To outside</h4>
+                <ul data-filter-field="domain" data-filter-pattern="outgoing">
+                    <li>Total:
+                        <span data-stat="count">N</span>
+                    </li>
+                    <li>Answered:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="ANSWERED">N</span>
+                    </li>
+                    <li>Missed:
+                        <span data-stat="count" data-filter-field="disposition" data-filter-pattern="^(?!ANSWERED).*$" data-filter-flags>N</span>
+                    </li>
+                    <li>Mean pick up time:
+                        <span data-field="picktime" data-stat="mean">00:00:00</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

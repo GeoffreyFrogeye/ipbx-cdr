@@ -1,8 +1,125 @@
-
 body {
     background: hsl(random(256)-1, 90, 90);
 }
-
 @import "../bower_components/c3/c3.css";
 @import "../bower_components/select2/select2.css";
 @import "../bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
+
+// Sidebar inspired by http://startbootstrap.com/template-overviews/simple-sidebar/
+$sidebar-size: 300px;
+body {
+    padding-left: 0;
+    transition: all 0.5s ease;
+
+    >nav {
+        z-index: 1000;
+        position: fixed;
+        left: $sidebar-size;
+        width: 0;
+        height: 100%;
+        margin-left: -$sidebar-size;
+        overflow-y: auto;
+        background: lighten($brand-primary, 46.7%);
+        transition: all 0.5s ease;
+
+        >h1 {
+            margin-left: 15px;
+        }
+
+        >ul {
+            padding: 0;
+            display: block;
+            width: 100%;
+
+            >li {
+                >a {
+                    display: block;
+                    width: 100%;
+                    height: 75px;
+                    padding-top: 20px;
+                    padding-left: 30px;
+                    font-size: 24px;
+                    cursor: pointer;
+                }
+
+                >a:hover {
+                    background: rgba($brand-primary, .3);
+                    text-decoration: none;
+                }
+
+                >a:active {
+                    background: rgba($brand-primary, .5);
+                    text-decoration: none;
+                }
+            }
+        }
+    }
+    >div {
+        width: 100%;
+        position: absolute;
+        padding: 15px;
+        overflow-x: auto;
+    }
+}
+body.toggled {
+    padding-left: $sidebar-size;
+    >nav {
+        width: $sidebar-size;
+    }
+    >div {
+        position: absolute;
+        margin-right: -$sidebar-size;
+    }
+}
+@media(min-width:768px) {
+    body {
+        padding-left: $sidebar-size;
+        >nav {
+            width: $sidebar-size;
+        }
+        >div {
+            padding: 20px;
+            position: relative;
+        }
+    }
+    body.toggled {
+        padding-left: 0;
+        >nav {
+            width: 0;
+        }
+        >div {
+            position: relative;
+            margin-right: 0;
+        }
+    }
+}
+.ix-inline-form {
+    @extend .form-inline;
+    input {
+        @extend .form-control;
+    }
+    select {
+        @extend .form-control;
+    }
+}
+button {
+    @extend .btn;
+    @extend .btn-default;
+}
+table {
+    @extend .table;
+    @extend .table-striped;
+    @extend .table-hover;
+    input {
+        @extend .form-control;
+    }
+    .tablesorter-filter-row td {
+        padding: 3px;
+    }
+}
+.tablesorter-pager {
+    @extend .ix-inline-form;
+}
+.filterInput {
+    @extend .ix-inline-form;
+}

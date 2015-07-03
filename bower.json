@@ -17,7 +17,9 @@
   ],
   "dependencies": {
     "jquery.tablesorter": "~2.22.1",
-    "select2": "3.5.2"
+    "select2": "3.5.2",
+    "startbootstrap-sb-admin-2": "~1.0.7",
+    "jquery-pjax": "~1.9.6"
   },
   "devDependencies": {
     "c3": "~0.4.10",

@@ -253,6 +253,26 @@ var cdr = null;
 
 
 $(function() {
+    // Navigation
+    $(document).pjax('nav a', '[role=main]');
+
+    $(document).on('pjax:start', function startNav() {
+        addOverlay();
+    });
+
+    $(document).on('pjax:success', function updateContainer() {
+        changed('[role=main]');
+        remOverlay();
+    });
+
+    function addOverlay() {
+        $('body').css('opacity', 0.5);
+    }
+
+    function remOverlay() {
+        $('body').css('opacity', 1);
+    }
+
 
     function formatEl(el, content, field) {
         el.empty();
@@ -467,7 +487,6 @@ $(function() {
                         el.addClass('tablesorter');
                         var columnSelector = $('<div>').insertBefore(el);
                         pagerTop = $('<div>')
-                            .addClass('.pager')
                             .append($('<button>').text('«').addClass('first'))
                             .append($('<button>').text('<').addClass('prev'))
                             .append($('<span>').text('Calls X - X of X (X total)').addClass('pagedisplay'))
@@ -500,7 +519,7 @@ $(function() {
                                         return '';
                                     }
                                 }),
-                                widgets: ['zebra', 'filter', 'columnSelector'],
+                                widgets: ['filter', 'columnSelector'],
                                 widgetOptions: {
                                     filter_formatter: fields.map(function(field) {
                                         switch (field.data('searcher')) {

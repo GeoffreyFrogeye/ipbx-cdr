@@ -1,0 +1,41 @@
+<h3>As a caller</h3>
+<div class="row">
+    <div class="col-xs-6">
+        <h4>Duration</h4>
+        <p>Last:
+            <span data-field="duration" data-stat="last"></span>
+        </p>
+        <p>Mean:
+            <span data-field="duration" data-stat="mean"></span>
+        </p>
+        <p>Sum:
+            <span data-field="duration" data-stat="sum"></span>
+        </p>
+    </div>
+    <div class="col-xs-6">
+        <h4>Billing</h4>
+        <p>Last:
+            <span data-field="billsec" data-stat="last"></span>
+        </p>
+        <p>Mean:
+            <span data-field="billsec" data-stat="mean"></span>
+        </p>
+        <p>Sum:
+            <span data-field="billsec" data-stat="sum"></span>
+        </p>
+    </div>
+</div>
+
+<h4>Calls</h4>
+<div data-field="duration" data-stat="timeseries"></div>
+<div class="row">
+    <div class="col-xs-6">
+        <h4>Destinations</h4>
+        <div data-field="dst" data-stat="pie"></div>
+    </div>
+    <div class="col-xs-6">
+        <h4>Last application</h4>
+        <div data-field="lastapp" data-stat="donut"></div>
+    </div>
+</div>
+</div>
