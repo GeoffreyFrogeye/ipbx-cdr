@@ -2,3 +2,13 @@ RewriteEngine on
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^.+$ index.php [L]
+
+<Files .env>
+Order Allow,Deny
+Deny from all
+</Files>
+
+AuthName "Access protected"
+AuthType Basic
+AuthUserFile /var/www/ipbx-cdr/.htpasswd
+Require valid-user
